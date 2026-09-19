@@ -73,6 +73,21 @@ Manual OPENCODE §12/§14: `mkboot`/`make hcboot-menuconfig` (defconfig `hichip_
 
 Riesgo residual acotado por: bytes de fábrica probados primero (D-2a'), bootloader dual-path (nunca queda sin camino de boot), dump NOR exacto para rollback, DDR-init byte-exacto. Único escenario de brick: escritura corrupta SIN readback (mitigado) o bootloader dual-path defectuoso (mitigado por D-2a' + validación strings).
 
+---
+
+## Addendum 4 — D-2c FALLO FÍSICO + recuperación total (2026-09-19, noche)
+
+**D-2c ejecutado con GO del usuario: flash verificado byte a byte — PERO la consola quedó en PANTALLA NEGRA sin boot de Linux** (probado con 2 SDs distintas: la nuestra + una stock — confirma fallo a nivel bootloader, no de SD). Análisis inicial ("Linux bootea headless") resultó ERRONEO: el boottrace de 42 KB era de un boot PRE-flash; Linux nunca arrancó tras el flash. **Causa raíz confirmada por diff completo NOR-DTB fábrica vs nuestro**: el NOR-DTB de fábrica ≠ dtb.bin de SD — son DTBs con propósitos DISTINTOS: el de fábrica tiene `panel-init-sequence` CORTA (la que el bootloader necesita para el LCD), bootargs de fábrica (console=ttyHC0 + earlycon uart), uart@1 con pinmux, y pinmux-active distintos. Nuestro build embebió el DTB del SD (secuencia LARGA) → el LCD mal inicializado → el bootloader muere antes de cargar el kernel. **LECCIÓN (ADR-015): el gate semántico del DTB comparaba contra la referencia equivocada para el BOOTLOADER — el NOR-DTB de fábrica es la única referencia válida para el bl; extraído de ahora en adelante del dump (factory-nordtb-0.dtb).**
+
+**Recuperación — canales probados:**
+1. ~~S07norflash (auto-flash en boot)~~: DEAD — Linux no bootea, el hook nunca corre.
+2. ~~HCFOTA.bin en raíz de SD (apuesta upgrade_force)~~: FALLIDO — el bootloader muere antes de llegar a un bootm (no dispara upgrade_force).
+3. **MODO CHIP-EN-BLANCO DEL BootROM (EL CANAL)** — descubierto en el documento oficial del driver USB (`Windows7&8_install_HiChip16xxUSB_Driver-v2.1.docx`): *"cortocircuitar los pines 2 y 4 del NOR flash mientras se enciende → la placa entra al modo USB de actualización directamente como chip en blanco (空片)"*. Nivel BootROM puro: no depende del contenido del NOR. Requiere: abrir la consola, cortocircuitar pin 2 (MISO/DO) con pin 4 (GND) del NOR SOP-8 (pin 1 = punto, lado izquierdo contando hacia abajo), encender con USB-C al PC → el BootROM enumera como dispositivo USB → driver HiChip16xxUSB → HCProgrammer flashea.
+
+**KIT v2 en `D:\R36SX\hcprogrammer-restore-kit\`**: HCProgrammer.exe + HCProgram.exe + HCProgram_bridge.exe + driver Windows (HiChip16xxUSB.inf/sys/cat + VC_redist) + `factory/spinorflash.bin` (512 KB = el NOR COMPLETO de fábrica: DDR-init + bootloader + eromfs + persistentmem, bytes exactos del dump, ensamblado con gen_flashbin oficial, sha a55fad63) + hc16xx_jtag_updater.bin (el "updater" que el tool reclamaba) + ddrinit.abs + hcprog.ini + LEEME-RESTAURACION.txt con el procedimiento completo.
+
+**Decisión del usuario para el fix-forward**: SELECT = tecla upgrade (nodo hcfota-upgrade con key de SELECT en el bl DTS corregido — para poder recuperar por botón si el bl propio vuelve a fallar). El fix-forward quedará: bl DTS = decompilado del NOR-DTB de FÁBRICA + path-prefix="boot" + nodo hcfota-upgrade(key=SELECT) + dual-path — solo tras restaurar la consola con el kit.
+
 ### Fase D-3 — flash vía HCFOTA (EL paso de riesgo — requiere red completa + GO explícito)
 Manual §16.17: `hcfota` = upgrade oficial, "nor flash only, ya soportado": escribe flag en persistentmem → reboot → **hcboot lee hcfota.bin de un USB y re-flashea NOR**; también `hcfota <file-path>` desde Linux. PRE-REQUISITO ANTES DE FLASHEAR: entender y VERIFICAR la recuperación BootROM-level (HCPROGRAMMER USB — BR2_EXTERNAL_HCPROGRAMMER_USB_IRQ_DETECT_TIMEOUT=300 sugiere detección USB al boot) — si nuestro hcboot no arranca, la única vía es BootROM/JTAG. **PROHIBIDO flashear sin: (1) dump verificado, (2) hcfota.bin construido y validado, (3) mecanismo de recuperación probado con la consola sana, (4) GO explícito del usuario.**
 
