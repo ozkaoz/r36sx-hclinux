@@ -2,6 +2,10 @@
 
 Formato: una línea por iteración; detalle técnico en `docs/experiments/` y commits.
 
+## 2026-09-21
+
+- **CONSOLA REVIVIDA ✅** — La R36SX V2.6 fue restaurada exitosamente mediante el modo chip-en-blanco del BootROM (corto de pines 2/4 del NOR SPI) + HCProgrammer USB. El archivo que funcionó fue `HCFOTA-factory-restore.bin` (988.648 B, generado por HCFota_Generator con el DDR-init de fábrica + hc16xx_jtag_updater.bin + las 3 particiones del NOR con bytes del dump). El NOR quedó con los bytes exactos de fábrica. TreeFrogUI bootea correctamente. Hallazgos: HCProgrammer requiere ambos .exe abiertos simultáneamente; el formato de firmware correcto es HCFOTA.bin (no spinorflash.bin crudo); el modo USB del BootROM persiste mientras el corto 2/4 esté activo. Docs: postmortem (addendum recuperación exitosa).
+
 ## 2026-09-20
 
 - **POST-MORTEM del brickeo (docs/experiments/2026-09-20_postmortem-brickeo-bootloader.md):** documento completo con cronología, causa raíz (NOR-DTB compilado desde el DTS stock-normalized de la SD ≠ NOR-DTB de fábrica: panel-init-sequence CORTA vs LARGA + pinmux/uart/LP-CLK-DIV → LCD mal inicializado → bootloader muere antes de cargar la SD → sin Linux → sin recovery), el diff de 89 líneas, el análisis de por qué cada intento de recuperación falló (S07norflash, HCFOTA, HCProgrammer USB, tecla, serial), las 4 lecciones (gate semántico contra la referencia equivocada, evidencia disponible no usada, violación de una-variable-por-boot, flash impecable pero contenido erróneo), el fix-forward diseñado (bl DTS desde factory-nordtb-0.dtb + SELECT upgrade key + gate NOR-DTB-vs-fábrica) y el estado físico de la consola (recuperación requiere CH341A+clip o corto de pines 2/4).

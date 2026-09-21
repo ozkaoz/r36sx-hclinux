@@ -143,3 +143,65 @@ Si la consola se restaura (vía CH341A + clip SOP-8, o corto de pines 2/4):
 - Recuperación física: `D:\R36SX\hcprogrammer-restore-kit\factory\spinorflash.bin`
   (512 KB, bytes exactos de fábrica) + CH341A + clip SOP-8 (recomendado)
   o corto de pines 2/4 del NOR SOP-8 al encender (método oficial HiChip)
+
+---
+
+## RECUPERACIÓN EXITOSA (2026-09-21) ✅
+
+**La consola fue revivida mediante el corto de pines 2/4 del NOR + HCProgrammer USB.**
+
+### Procedimiento que funcionó:
+
+1. **Corto de pines 2/4** (pin 1 = punto, lado izquierdo contando hacia abajo:
+   pin 2 = segundo = MISO, pin 4 = abajo = GND) — con la consola apagada,
+   USB-C ya conectado al PC.
+2. **Encender la consola** con el corto activo → el BootROM no puede leer
+   el NOR (MISO a GND) → entra al modo USB de chip-vacío.
+3. **Windows reconoce el dispositivo** como "HiChip 16xx USB Device".
+4. **Driver**: `HiChip16xxUSB.inf` (del SDK, en `driver/` del kit).
+5. **HCProgrammer.exe** con "Firmware select" =
+   `HCFOTA-factory-restore.bin` (generado por HCFota_Generator oficial:
+   updater + DDR-init de fábrica + 3 particiones del NOR con bytes del dump).
+6. **Start Burn** → el tool detecta el dispositivo, inicializa DDR con los
+   parámetros de fábrica, carga el flash-writer (updater), y escribe el NOR.
+7. **Reboot** → el bootloader de FÁBRICA arranca → pantalla normal →
+   TreeFrogUI bootea correctamente.
+
+### Hallazgos técnicos del proceso de recuperación:
+
+- **HCProgrammer requiere ambos ejecutables abiertos simultáneamente**
+  (HCProgram.exe + HCProgrammer.exe) para que la detección funcione.
+- **El formato de firmware correcto es HCFOTA.bin** (generado por
+  HCFota_Generator con `-r ddrinit.abs -p hc16xx_jtag_updater.bin`).
+  El `spinorflash.bin` (binario crudo del NOR) NO funciona — el tool
+  busca secciones "updater" y "DDR info" dentro del archivo.
+- **El modo USB del BootROM persiste mientras el corto 2/4 esté activo**
+  (la línea MISO a GND mantiene el BootROM en blank-chip mode).
+- El HCFOTA.bin exitoso parsea con: Version=2609200000, Product=HC16D3100V20,
+  3 particiones (boot + eromfs + persistentmem), versión check disabled.
+
+### Archivo final que revivió la consola:
+
+```
+D:\R36SX\hcprogrammer-restore-kit\HCFOTA-factory-restore.bin
+(988.648 B, sha256 29ed112c766fbe5c…)
+```
+
+### Lecciones de la recuperación:
+
+1. El formato HCFOTA.bin (no el binario crudo) es el que el HCProgrammer
+   espera como "firmware".
+2. El DDR-init de fábrica (`d944d9af…`) es esencial — el tool lo envía al
+   BootROM para inicializar RAM antes de poder flashear.
+3. El `hc16xx_jtag_updater.bin` del SDK es el flash-writer que corre en
+   el chip para escribir el NOR.
+4. El corto 2/4 es seguro y reversible (MISO a GND durante el power-on).
+5. La paciencia y el orden correcto (corto → encender → detectar → flashear)
+   son críticos: el BootROM sale del modo USB si pasa demasiado tiempo.
+
+### Estado final de la consola:
+
+- **NOR = bytes exactos de fábrica** (bootloader stock + eromfs + persistentmem).
+- **Pantalla normal, TreeFrogUI funciona**.
+- La SD con nuestro kernel 8e + rootfs propio + TreeFrogUI sigue funcional.
+- El caso cubegm queda como estaba antes del flash del bootloader propio.

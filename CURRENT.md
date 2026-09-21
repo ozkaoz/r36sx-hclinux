@@ -1,6 +1,6 @@
 # CURRENT.md — Snapshot operacional (CACHÉ — Git es la verdad)
 
-**Actualizado:** 2026-09-19 (D-2b DONE: bootloader propio BUILD PASS + validación 9a completa; paquete D-2c desplegado en SD; PENDIENTE GO explícito del usuario para el flash del bootloader)
+**Actualizado:** 2026-09-21 (CONSOLA REVIVIDA ✅ — NOR restaurado a fábrica vía BootROM USB (corto 2/4 + HCProgrammer + HCFOTA-factory-restore.bin); TreeFrogUI funcional; el caso cubegm/bootloader propio queda documentado como POST-MORTEM — ver docs/experiments/2026-09-20_postmortem-brickeo-bootloader.md)
 **Regla:** snapshot pequeño, sin historia. No changelog.
 
 ## PROJECT
@@ -9,13 +9,12 @@ r36sx-hclinux — plataforma Linux/HCLinux reproducible para R36SX V2.6 (HC16xx/
 
 ## CURRENT PHASE
 
-**FASE D — D-2b COMPLETO.** Bootloader propio construido y validado (método 9a): DDR-init de fábrica byte-exacto, NOR-DTB embebido path-prefix="boot", fallback dual-path compilado, módulo HCFOTA upgrade (SD) incluido. Paquete de flash desplegado en la SD: `/boot/` (copias idénticas de los 4 archivos) + imagen `bootloader-r36sx-v26-faseD2b.bin` (`1734c340…`) + `d2c_flash_bootloader.sh`. **ESPERA: GO explícito del usuario para D-2c (flash de /dev/mtd1).**
+**CONSOLA RESTAURADA A FÁBRICA (NOR) + SD CON DESARROLLO PROPIO FUNCIONAL.** El bootloader de NOR es el de fábrica (restaurado vía blank-chip USB). La SD tiene nuestro kernel 8e + rootfs propio + TreeFrogUI funcional (audio, video, salida de emuladores — PHYSICAL PASS). El caso "eliminar cubegm/ 100%" está PAUSADO tras el brickeo del bootloader propio. El POST-MORTEM completo con las 4 lecciones + el fix-forward diseñado está en docs/experiments/2026-09-20_postmortem-brickeo-bootloader.md.
 
 ## CURRENT OBJECTIVE
 
-1. **GO del usuario** → ejecuta `sh /mnt/sdcard/d2c_flash_bootloader.sh` en FrogShell → reboot → boot-1 (esperado: idéntico, ahora cargando desde /boot/ con fallback cubegm/).
-2. Boot-2: swap `/boot/{dtb.bin, vmlinux.uImage}` por los builds nuevos (dtb "boot" + kernel eb0360ca) → reboot.
-3. **D-3**: borrar `cubegm/` al 100% → boot-3 → caso cerrado.
+1. Decisión del usuario: retomar el objetivo cubegm 0% (con el fix-forward diseñado: bl DTS desde factory-nordtb-0.dtb + SELECT upgrade key + gate NOR-DTB-vs-fábrica) O continuar con otras prioridades.
+2. Si retoma: PRIMER PASO obligatorio = gate nuevo (diff NOR-DTB compilado vs factory-nordtb-0.dtb) ANTES de cualquier build/flash.
 
 ## CURRENT HEAD
 
@@ -23,19 +22,21 @@ r36sx-hclinux — plataforma Linux/HCLinux reproducible para R36SX V2.6 (HC16xx/
 
 ## KNOWN-GOOD STATE
 
-- **SD = instalación limpia + cubegm mínimo NOR — PHYSICAL PASS** (kernel 8e `f8fb6768`).
-- **D-2a' PHYSICAL PASS**: mecanismo MTD probado (re-escritura bytes idénticos de fábrica + reboot OK).
-- **bootloader.bin propio** (BUILD PASS + validado): DDR-init fábrica (d944d9af, campo tamaño dinámico), hcboot 413.216 B, NOR-DTB "boot", dual-path, upgrade SD. Imagen flash: staging + SD (`1734c340…`, 442.368 B pad 0xFF).
-- Dump NOR (rollback): `D:\R36SX\nor-dump-20260919\` + nuestro build descomprimido + ambos NOR-DTB.
-- Backup SD: `sd-full.tar` (`963dfd23…`).
+- **NOR = FÁBRICA** (restaurado 2026-09-21 vía BootROM USB blank-chip mode)
+- **SD = instalación limpia + cubegm mínimo NOR** — PHYSICAL PASS total (audio/video/salida/TreeFrogUI)
+- Kernel 8e `f8fb6768` (ABI fixes 9l/9m + S99app v2 + S09trace v5.1 + snd_xfer budget)
+- Backup completo: `sd-full.tar` (`963dfd23…`) + `D:\R36SX\nor-dump-20260919\` (NOR + DDR-init + bootloader descomprimido + ambos NOR-DTB)
+- Kit de recuperación: `D:\R36SX\hcprogrammer-restore-kit\` (HCFOTA-factory-restore.bin `29ed112c…` + HCProgrammer + driver + todos los archivos)
+- Staging: `D:\R36SX\staging\` (fase9m, fase7a, fase8e — fase8e es el bootloader que brickeó, NO desplegar sin fix-forward)
 
 ## BUILD STATUS
 
-**KERNEL+ROOTFS+BOOTLOADER OWN: BUILD PASS.** bootloader.bin 425.504 B < partición ✓. (Nota: el paso final "flash binary" falla por romfs/logo > eromfs — irrelevante: no flasheamos eromfs; bootloader.bin se genera antes.)
+**KERNEL+ROOTFS: BUILD PASS** (gates TOOLCHAIN/PATCH/DTB PASS).
+**BOOTLOADER: NO DESPLEGAR** el build actual (fase8e `f8fb6768` NOR — brickeó por NOR-DTB incorrecto; fix-forward requerido).
 
 ## PHYSICAL STATUS
 
-**TODO PHYSICAL PASS previo.** D-2a' mecanismo MTD PASS. D-2c flash pendiente de GO.
+**CONSOLA FUNCIONAL** — NOR de fábrica + SD con desarrollo propio. TreeFrogUI bootea. El bootloader propio queda como experimento fallido documentado.
 
 ## SOURCE SDK SHA256
 
@@ -43,19 +44,19 @@ r36sx-hclinux — plataforma Linux/HCLinux reproducible para R36SX V2.6 (HC16xx/
 
 ## ACTIVE BLOCKERS
 
-Ninguno técnico. **D-2c requiere GO explícito del usuario** (zona prohibida §5 — mitigado por: mecanismo probado D-2a' + dual-path + dump de rollback + DDR-init fábrica).
+Ninguno. El fix-forward del bootloader está diseñado y documentado (requiere: DTS desde factory-nordtb-0.dtb + gate nuevo + una-variable-por-boot).
 
 ## NEXT EXACT ACTION
 
-1. Usuario da GO → ejecuta `sh /mnt/sdcard/d2c_flash_bootloader.sh` en FrogShell (consola encendida, SD insertada) → ~2 min → reboot → reportar.
-2. Con boot-1 PASS → boot-2 (swap dtb/kernel nuevos en /boot/) → boot-3 (D-3: borrar cubegm/).
+1. Usuario decide: retomar cubegm 0% con fix-forward, o continuar con otras prioridades.
+2. Si retoma: implementar el bl DTS desde factory-nordtb-0.dtb + gate NOR-DTB-vs-fábrica + SELECT upgrade key.
 
 ## REFERENCIA RÁPIDA
 
 | Subsistema | Ver |
 |------------|-----|
-| Caso cubegm + Fase D (4 addendums) | `docs/experiments/2026-09-19_cubegm-minimal-boot-contract.md` |
-| bl defconfig + parche dual-path | `boards/r36sx-v26/bootloader/` + `patches/bootloader/0001` |
-| Dump NOR + builds descomprimidos + NOR-DTBs | `D:\R36SX\nor-dump-20260919\` |
-| Herramientas flash | `tools/mtdnor` + `tools/d2c_flash_bootloader.sh` |
+| POST-MORTEM + recuperación exitosa + fix-forward | `docs/experiments/2026-09-20_postmortem-brickeo-bootloader.md` |
+| Contrato TreeFrogUI (boot/ABI/layout) | `docs/TREEFROG_UI_CONTRACT.md` |
+| ADR-012 (ABI) / ADR-013 (diag opt-in) | `DECISIONS.md` |
+| Kit de recuperación NOR | `D:\R36SX\hcprogrammer-restore-kit\` |
 | Reglas (§5 hardware, §13 sync, §14 provenance) | `AGENTS.md` |
