@@ -3,7 +3,7 @@
 # GATE PASADO: /hcrtos/ == FÁBRICA (excepto path-prefix=boot + hcfota-upgrade/SELECT).
 # DUAL-PATH: si /boot/ no existe, cae automáticamente a cubegm/ → boot seguro.
 IMG=/mnt/sdcard/bootloader-faseD2b-fix.bin
-EXPECTED=279d6db36c35e87c81c3e0be8ecfc6d52a5d7640a3bb4ec0865720d3f5495c9
+EXPECTED=279d6db36c35e87cd417a2d21a12b01e107838db1023da6f048bae5755f36c9f
 echo "1) sha256 de la imagen:"
 echo "$EXPECTED  $IMG" | sha256sum -c - || { echo "IMAGEN NO COINCIDE — ABORT"; exit 1; }
 echo "2) mtdnor accesible?:"

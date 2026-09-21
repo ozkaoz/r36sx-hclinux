@@ -205,3 +205,77 @@ D:\R36SX\hcprogrammer-restore-kit\HCFOTA-factory-restore.bin
 - **Pantalla normal, TreeFrogUI funciona**.
 - La SD con nuestro kernel 8e + rootfs propio + TreeFrogUI sigue funcional.
 - El caso cubegm queda como estaba antes del flash del bootloader propio.
+
+---
+
+## SEGUNDO INCIDENTE (2026-09-21, tarde) — fix-forward con NOR-DTB correcto TAMBIÉN brickeó
+
+**Contexto:** Se implementó el fix-forward diseñado (DTS desde factory-nordtb-0.dtb,
+GATE PASS con /hcrtos/ == fábrica). El NOR-DTB compilado tenía la secuencia
+CORTA de panel, pinmux y uart de fábrica — la causa raíz del PRIMER brickeo
+estaba eliminada. Sin embargo, la consola siguió en pantalla negra.
+
+**GATE PASS en el build:**
+- panel-init-sequence: FÁBRICA (CORTA) ✓
+- pinmux: FÁBRICA ✓
+- uart: FÁBRICA ✓
+- path-prefix: "boot" (cambio deliberado) ✓
+- hcfota-upgrade: SELECT (cambio deliberado) ✓
+
+**Causa probable (no confirmada por falta de serial):**
+
+La causa raíz NO era solo el NOR-DTB. El binario `hcboot` compilado desde
+nuestro SDK (2024.02.y.2) tiene diferencias adicionales respecto al
+`hcboot-custom` de fábrica que causan pantalla negra incluso con el DTB correcto:
+
+1. **CONFIG_BOOT_HCRTOS_OR_HCLINUX_DUALCORE (nuestro) vs boot always-dualcore (fábrica)**:
+   El defconfig c3_q6 tiene modo OR (condicional según standby slot). Si el
+   slot no es SECONDARY, el bootloader intenta bootear HCRTOS en vez de Linux
+   → pantalla negra sin Linux. La fábrica siempre arranca dualcore.
+
+2. **Prebuilt libraries**: Los `prebuilts/boot/sysroot` (libauddrv, libviddrv)
+   del SDK 2024.02.y.2 pueden diferir de los que usó la fábrica (línea 2025).
+
+3. **Gap de versión SDK**: El SDK 2024.02.y.2 (Jul-2024) vs la línea e3100_cube
+   (Dic-2025) puede tener cambios en el código del bootloader, bug fixes, o
+   diferencias en el toolchain que afectan el boot chain crítico.
+
+4. **Timing**: Diferencias sutiles en la inicialización del hardware (DDR,
+   periféricos) que no se manifiestan como errores visibles pero impiden que
+   el kernel arranque correctamente.
+
+**Recuperación (segunda vez):** Mismo método probado — corto de pines 2/4 +
+HCProgrammer + HCFOTA-factory-restore.bin. Consola restaurada en ~10 min.
+
+## CONCLUSIÓN DEFINITIVA: el bootloader de fábrica NO ES reemplazable con el SDK disponible
+
+Después de DOS intentos con validación creciente:
+- Intento 1: NOR-DTB incorrecto (DTS de SD) → BRICKEO
+- Intento 2: NOR-DTB correcto (GATE PASS, /hcrtos/ de fábrica) → BRICKEO
+
+**La conclusión es que el binario hcboot compilado desde el SDK 2024.02.y.2
+es fundamentalmente incompatible con la consola R36SX V2.6**, independientemente
+del DTB. El bootloader de fábrica fue compilado con una versión del SDK y
+toolchain que no tenemos acceso, y el resultado es un artefacto que funciona
+en hardware donde el nuestro no.
+
+**RECOMENDACIÓN FINAL**: Aceptar `cubegm/` con sus 4 archivos (3,9 MB) como
+el **contrato de boot NOR** — una limitación de hardware documentada, igual que
+el DDR-init que NO podemos reconstruir. El objetivo "eliminar cubegm/ 100%"
+queda en estado NO ALCANZABLE con las herramientas actuales. La alternativa
+sería obtener el SDK exacto que usó el fabricante (línea e3100_cube, Dic-2025).
+
+**Qué SÍ funcionó en el proceso:**
+- Kernel propio: 100% nuestro ✓
+- Rootfs Buildroot propio: 100% nuestro ✓
+- TreeFrogUI funcional con audio+video+salida ✓
+- Instalación limpia en SD ✓
+- ABI fix (ADR-012): audio+video funcionando ✓
+- Diagnóstico opt-in (ADR-013) ✓
+- El bootloader de fábrica con path-prefix="cubegm" es el contrato inamovible
+
+**Qué NO funcionó:**
+- Bootloader propio (2 intentos, 2 brickeos)
+- La lección: el bootloader es la pieza más crítica y sensible del sistema,
+  y ni siquiera un GATE perfecto del DTB compensa las diferencias binarias
+  entre versiones del SDK
