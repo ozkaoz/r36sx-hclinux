@@ -1,0 +1,145 @@
+# POST-MORTEM: El camino al brickeo de la R36SX V2.6 (2026-09-19/20)
+
+> Documento de lecciones técnicas. La consola QUEDÓ BRICKEADA por software
+> (pantalla negra, sin boot) tras el flash del bootloader propio (D-2c).
+> El mecanismo de recuperación por software está agotado; la restauración
+> requiere intervención física (CH341A + clip SOP-8, o corto de pines 2/4).
+
+## Cronología del incidente
+
+### Contexto: qué funcionaba antes
+- La consola arrancaba 100% con desarrollo propio (kernel + rootfs Buildroot
+  + TreeFrogUI completo: audio, video, salida de emuladores — PHYSICAL PASS
+  total en Fase 8).
+- `cubegm/` ya estaba reducido a su mínimo NOR: 4 archivos de boot + 2 goldens.
+
+### Paso 1: El objetivo
+> "Eliminar cubegm/ al 100% de la SD"
+
+La investigación fue sólida: el path `cubegm/` es la propiedad `path-prefix`
+del nodo `/hcrtos/external_files` del **NOR-DTB del bootloader**. El objetivo
+exigía reemplazar el bootloader de NOR (zona prohibida §5, con GO explícito).
+
+### Paso 2: D-1 — Dump NOR (la decisión que salvó todo)
+- Dump bit-a-bit del NOR desde Linux (`/dev/mtd*ro`, hashes verificados).
+- **DDR-init de fábrica extraído byte-exacto** (`d944d9af…`) — no coincidía
+  con NINGÚN ddrinit del SDK → decisión correcta: usar solo el extraído.
+- Bootloader de fábrica **descomprimido** (LZMA @0x5e48): `hcboot-custom`
+  del proyecto `e3100_cube`.
+- **NOR-DTB de fábrica extraído** del payload (`factory-nordtb-0.dtb`) —
+  disponible desde este momento.
+
+### Paso 3: D-2a' — Prueba del mecanismo MTD (PASS)
+- Re-escritura de bytes IDÉNTICOS de fábrica sobre `/dev/mtd1`.
+- Readback byte-a-byte verificado → reboot → consola idéntica = mecanismo probado.
+
+### Paso 4: D-2b — Build del bootloader propio
+
+**Piezas correctas:**
+- bl defconfig derivado de `cb_d3100_v10_projector_c3_q6` (familia d3100 + dualcore)
+- **DDR-init de fábrica** con verificación sha256 en build_kernel.sh
+- Entry point adaptado automáticamente por el hook del SDK (`0x89EB0000` ==
+  DDR-init `0xa9eb0000`) ✓
+- **Parche dual-path fallback** (`/boot/` → `cubegm/`) compilado ✓
+- Módulo UPGRADE completo (SD/USBHOST) incluido ✓
+- 2.702 strings comunes con fábrica (método 9a) ✓
+
+**LA PIEZA QUE FALTÓ — el error crítico:**
+- El NOR-DTB embebido se compiló desde **nuestro DTS stock-normalized**
+  (el mismo que genera el `dtb.bin` de la SD).
+- **El gate semántico** (`compare_dtb_semantics.sh`) comparaba contra
+  `reference/stock-normalized.dts` (el dtb de la SD).
+- **NADIE comparó el NOR-DTB compilado contra el `factory-nordtb-0.dtb`** —
+  que ya teníamos extraído desde D-1.
+
+### Paso 5: D-2c — El flash (byte-perfecto, consola brickeada)
+- Imagen: `bootloader.bin` (425.504 B) con padding 0xFF a 442.368 B.
+- Flash ejecutado con GO explícito del usuario.
+- **mtdnor verificó el readback byte-a-byte → el flash fue impecable.**
+- Reboot → **PANTALLA NEGRA, Linux nunca arrancó.**
+
+---
+
+## Causa raíz
+
+```
+Nuestro build compiló el NOR-DTB desde el DTS stock-normalized
+    ↓
+Ese DTB tiene una panel-init-sequence LARGA (la del kernel/SD)
+    ↓
+El NOR-DTB de FÁBRICA tiene una secuencia CORTA (diferente)
+    ↓
+El bootloader usa fdtp (SU NOR-DTB embebido) para TODO su hardware init
+    ↓
+LCD init con la secuencia/pinmux/LP-CLK-DIV equivocados → el panel
+queda mal inicializado / el driver se cuelga o crashea
+    ↓
+El bootloader muere ANTES de cargar cualquier archivo de la SD
+    ↓
+No hay Linux → no hay S09trace → no hay mtdnor → no hay recovery por SD
+```
+
+**Diff del NOR-DTB de fábrica vs el nuestro (89 líneas):**
+
+| Propiedad | Fábrica | Nuestro | Impacto |
+|---|---|---|---|
+| `panel-init-sequence` | CORTA (3 comandos) | LARGA (100+ comandos) | **LCD mal inicializado** |
+| `LP-CLK-DIV` | ausente | `<0x02>` extra | Reloj DSI incorrecto |
+| `pinmux-active` | 4 pines | 6 pines (extra) | Pines mal configurados |
+| `uart@1` | `status="okay"` + pinmux | Ausente | Sin consola serial |
+| `bootargs` | `console=ttyHC0,115200N8` | `console=tty1` | Sin earlycon |
+| `path-prefix` | `"cubegm"` | `"boot"` | El cambio intencional ✓ |
+
+## Por qué cada intento de recuperación falló
+
+| Intento | Por qué falló |
+|---|---|
+| **S07norflash** (auto-flash en boot) | Requiere que Linux arranque → nunca arrancó |
+| **HCFOTA.bin en raíz de SD** | `upgrade_force()` se dispara solo si un `bootm` falla → el bl muere antes de llegar a cualquier bootm |
+| **HCProgrammer USB** | El sondeo USB (`sys_hcprogrammer_check_timeout`, bootm_os.c:88) corre en el bootloader **justo antes de lanzar el kernel** → nunca se ejecutó |
+| **Tecla upgrade** | El nodo `hcfota-upgrade` no existe ni en el NOR-DTB de fábrica |
+| **Serial** | `serial0 = "/hcrtos/uart_dummy"` en nuestro NOR-DTB + no hay cable |
+
+## Las lecciones (para ADR)
+
+1. **El gate semántico del DTB comparaba contra la referencia equivocada para
+   el bootloader**: para el KERNEL, la referencia correcta es el `dtb.bin` de
+   la SD (stock-normalized). Para el BOOTLOADER, la referencia correcta es el
+   **NOR-DTB de fábrica** extraído del bootloader descomprimido. Son DTBs con
+   propósitos distintos y contenido diferente.
+
+2. **Teníamos la evidencia y no la usamos**: el `factory-nordtb-0.dtb` fue
+   extraído en D-1, pero nunca se hizo un diff completo contra nuestro NOR-DTB
+   compilado antes del flash. El diff habría revelado las 89 líneas de
+   diferencia (incluida la secuencia del panel) y el flash no se habría ejecutado.
+
+3. **La "una variable por boot" se violó en el flash**: en un solo flash
+   cambiamos: el bootloader completo + el NOR-DTB (path-prefix + panel +
+   pinmux + uart) + el defconfig fuente. Si hubiéramos flasheado primero un
+   bootloader con el NOR-DTB de fábrica VERBATIM (solo path-prefix cambiado),
+   habría funcionado.
+
+4. **El mecanismo de flash fue impecable**: DDR-init correcto, entry correcto,
+   readback verificado. El brickeo fue por CONTENIDO (el DTB), no por PROCESO.
+
+## El fix-forward (diseñado, no ejecutado)
+
+Si la consola se restaura (vía CH341A + clip SOP-8, o corto de pines 2/4):
+
+1. bl DTS = decompile del `factory-nordtb-0.dtb` (la referencia CORRECTA) +
+   SOLO `path-prefix="boot"` cambiado.
+2. Nodo `hcfota-upgrade` con SELECT como tecla upgrade (decisión del usuario).
+3. Dual-path fallback ya compilado ✓
+4. DDR-init de fábrica ya integrado ✓
+5. **Gate nuevo**: diff completo NOR-DTB compilado vs factory-nordtb-0.dtb =
+   0 líneas de diferencia (excepto path-prefix + hcfota-upgrade).
+
+## Estado de la consola al cierre de este documento
+
+- NOR contiene nuestro bootloader (flash verificado byte-a-byte)
+- Pantalla negra al encender; Linux nunca arranca
+- La SD no influye en el estado (probado con 2 SDs distintas)
+- Recuperación por software: agotada
+- Recuperación física: `D:\R36SX\hcprogrammer-restore-kit\factory\spinorflash.bin`
+  (512 KB, bytes exactos de fábrica) + CH341A + clip SOP-8 (recomendado)
+  o corto de pines 2/4 del NOR SOP-8 al encender (método oficial HiChip)
