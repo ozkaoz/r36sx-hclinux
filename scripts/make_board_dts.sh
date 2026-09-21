@@ -1,63 +1,79 @@
 #!/usr/bin/env bash
-# make_board_dts.sh — Ensambla r36sx-v26.dts stock-equivalent CON macros del hook SDK.
-# dtc del kernel se invoca tras cpp (Buildroot), por eso los vendor DTS usan #define.
-# Para validación standalone usamos gcc -E || dtc (mismo pipeline que Buildroot).
+# make_board_dts.sh (fix-forward D-2b) — Genera r36sx-v26.dts con /hcrtos/ de FÁBRICA.
+# FLUJO: make_bl_dts.py genera el cuerpo → este script añade macros → valida.
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$BASH_SOURCE")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$SCRIPT_DIR/.." && pwd)"
-REF="$REPO/boards/r36sx-v26/reference/stock-normalized.dts"
 OUT="$REPO/boards/r36sx-v26/dts/r36sx-v26.dts"
 
-[ -f "$REF" ] || { echo "ERROR: falta $REF — ejecutar scripts/extract_stock_dts.sh"; exit 1; }
-mkdir -p "$(dirname "$OUT")"
+echo "=== make_board_dts (fix-forward: /hcrtos/ de FÁBRICA) ==="
 
-LINUX_SIZE=0xAF91E50     # memory reg size stock
-SYSMEM_SIZE=0xB53600     # hcrtos sysmem size stock
+# 1. generar el cuerpo (factory /hcrtos/ + Linux nodes + path-prefix=boot + hcfota-upgrade)
+python3 "$REPO/scripts/make_bl_dts.py" > /dev/null
+echo "cuerpo generado: $(wc -l < "$OUT") líneas"
 
-{
-  echo "/* r36sx-v26.dts — R36SX V2.6 stock-equivalent board DTS (generado por scripts/make_board_dts.sh — NO editar a mano)"
-  echo " * Cuerpo: reference/stock-normalized.dts (DTB stock sha 1258f1eb..., roundtrip SEMANTIC PASS)."
-  echo " * Macros: sistema del SDK (hc16xx-*.dts vendor usa #define + valores; hook fixup-load-addr"
-  echo " * requiere CONFIG_LINUX_MEMORY_OFFSET/HCRTOS_SYSMEM_OFFSET resolubles vía gcc -E)."
-  echo " * Valores = mapa stock exacto (docs/DTS_STOCK_MODEL.md): Linux 175.57 MiB @0, sysmem @0xBDA2E50."
-  echo " */"
-  head -1 "$REF"
-  echo ""
-  echo "#define CONFIG_MEMORY_SIZE 0x10000000"
-  echo "#define CONFIG_LINUX_MEMORY_SIZE ${LINUX_SIZE}"
-  echo "#define CONFIG_LINUX_MEMORY_OFFSET 0x0"
-  echo "#define CONFIG_FRAMEBUFFER_STATIC_PHYS (CONFIG_LINUX_MEMORY_OFFSET + CONFIG_LINUX_MEMORY_SIZE)"
-  echo "#define HCRTOS_SYSMEM_SIZE ${SYSMEM_SIZE}"
-  echo "#define HCRTOS_SYSMEM_OFFSET 0xBDA2E50"
-  echo ""
-  echo "/* Fase D-2b: macros del bootloader (hook fixup-load-addr de apps-bootloader"
-  echo " * requiere HCRTOS_BOOTMEM_OFFSET resoluble via gcc -E; formula identica a la"
-  echo " * del vendor en hc16xx-*-avp.dtsi; con SYSMEM 0xBDA2E50 resuelve 0x9DA0000"
-  echo " * == bootmem reg del DTB stock exacto). */"
-  echo "#define HCRTOS_BOOTMEM_SIZE 0x2000000"
-  echo "#define HCRTOS_BOOTMEM_OFFSET (((HCRTOS_SYSMEM_OFFSET < 0xc000000 ? HCRTOS_SYSMEM_OFFSET : 0xc000000) - HCRTOS_BOOTMEM_SIZE) & 0xffff0000)"
-  echo ""
-  tail -n +2 "$REF"
-} > "$OUT"
+# 2. añadir macros del hook SDK (necesarias para el entry addr del bootloader)
+TMP="$OUT.tmp"
+cat > "$TMP" << 'HDR'
+/* r36sx-v26.dts — /hcrtos/ del NOR-DTB de FÁBRICA (fix-forward D-2b) */
+#define CONFIG_MEMORY_SIZE 0x10000000
+#define CONFIG_LINUX_MEMORY_SIZE 0xAF91E50
+#define CONFIG_LINUX_MEMORY_OFFSET 0x0
+#define CONFIG_FRAMEBUFFER_STATIC_PHYS (CONFIG_LINUX_MEMORY_OFFSET + CONFIG_LINUX_MEMORY_SIZE)
+#define HCRTOS_SYSMEM_SIZE 0xB53600
+#define HCRTOS_SYSMEM_OFFSET 0xBDA2E50
+#define HCRTOS_BOOTMEM_SIZE 0x2000000
+#define HCRTOS_BOOTMEM_OFFSET (((HCRTOS_SYSMEM_OFFSET < 0xc000000 ? HCRTOS_SYSMEM_OFFSET : 0xc000000) - HCRTOS_BOOTMEM_SIZE) & 0xffff0000)
 
-# Fase D-2b: DELTA DELIBERADO — path-prefix "boot" (nuevo layout propio; el
-# bootloader lleva fallback dual-path a cubegm/). Documentado + allowlist en el gate.
-sed -i 's/path-prefix = "cubegm";/path-prefix = "boot";/' "$OUT"
+HDR
+cat "$OUT" >> "$TMP"
+mv "$TMP" "$OUT"
+echo "macros añadidas: $(wc -l < "$OUT") líneas"
 
-echo "=== make_board_dts ==="
-echo "salida: $OUT ($(wc -l < "$OUT") líneas)"
-# validación con el MISMO pipeline que usará Buildroot: cpp (gcc -E) → dtc
+# 3. validar con el pipeline de Buildroot: cpp → dtc
 TMPD=$(mktemp -d)
 gcc -E -nostdinc -undef -D__DTS__ -x assembler-with-cpp -o "$TMPD/pp.dts" "$OUT" 2>/dev/null
-dtc -I dts -O dtb -o "$TMPD/test.dtb" "$TMPD/pp.dts" 2>"$TMPD/dtc.err" || { echo "DTC FAIL:"; head -5 "$TMPD/dtc.err"; exit 1; }
+dtc -I dts -O dtb -o "$TMPD/test.dtb" "$TMPD/pp.dts" 2>"$TMPD/dtc.err" \
+  || { echo "DTC FAIL:"; head -5 "$TMPD/dtc.err"; exit 1; }
 echo "gcc -E + dtc: OK ($(stat -c%s "$TMPD/test.dtb") bytes)"
-# verificación de equivalencia semántica inmediata contra la referencia
+
+# 4. GATE: /hcrtos/ compilado vs factory NOR-DTB
 dtc -I dtb -O dts -s -o "$TMPD/test.dts" "$TMPD/test.dtb" 2>/dev/null
-if diff -q "$REF" "$TMPD/test.dts" >/dev/null; then
-  echo "SEMANTIC vs stock: PASS (idéntico)"
-else
-  echo "SEMANTIC vs stock: DIFF —"
-  { diff "$REF" "$TMPD/test.dts" | head -20 || true; }
-fi
+dtc -I dtb -O dts -s -o "$TMPD/factory.dts" /mnt/d/R36SX/nor-dump-20260919/factory-nordtb-0.dtb 2>/dev/null
+
+python3 - "$TMPD/test.dts" "$TMPD/factory.dts" << 'PYEOF'
+import re, sys
+
+def hcrtos(path):
+    with open(path) as f:
+        c = f.read()
+    m = re.search(r'(\thcrtos \{.*?\n\t\};)', c, re.DOTALL)
+    return m.group(1) if m else ""
+
+test = hcrtos(sys.argv[1])
+factory = hcrtos(sys.argv[2])
+
+test_set = set(l.strip() for l in test.split('\n') if l.strip())
+fact_set = set(l.strip() for l in factory.split('\n') if l.strip())
+
+unexpected = []
+for l in test_set - fact_set:
+    if any(k in l for k in ['path-prefix', 'hcfota-upgrade', 'key', 'status', 'boot']):
+        continue
+    unexpected.append(l)
+for l in fact_set - test_set:
+    if any(k in l for k in ['path-prefix', 'hcfota-upgrade', 'key']):
+        continue
+    unexpected.append(l)
+
+if unexpected:
+    print(f"GATE NOR-DTB: FAIL — {len(unexpected)} diferencias inesperadas:")
+    for d in sorted(unexpected)[:10]:
+        print(f"  {d}")
+    sys.exit(1)
+else:
+    print("GATE NOR-DTB: PASS — /hcrtos/ == fábrica (excepto cambios deliberados)")
+PYEOF
+
 echo "=== make_board_dts DONE ==="
