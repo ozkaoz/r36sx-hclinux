@@ -83,6 +83,11 @@ if [ "$KVER" = "5.12.4" ]; then
   else
     bad "own-9101: hc_gpio_key sin port timer (setup_timer removida en 5.0 — no compila)"
   fi
+  if grep -q 'ktime_ms_delta' "$KB/drivers/hcdrivers/musb/hcusb.c" 2>/dev/null; then
+    ok "own-9102: hcusb.c timeval->ktime port (9-6a) aplicado"
+  else
+    bad "own-9102: hcusb.c sin port ktime (do_gettimeofday removida en 5.0)"
+  fi
 else
   grep -q 'setup_timer' "$KB/drivers/hcdrivers/input/gpio/hc_gpio_key.c" 2>/dev/null \
     && ok "hc_gpio_key con setup_timer (API 4.4 — correcto para $KVER)" \
@@ -99,7 +104,9 @@ NPOWN=$(find "$OWN" -maxdepth 1 -name '*.patch' 2>/dev/null | wc -l)
 [ "$NPOWN" -eq 4 ] && ok "set repo patches/buildroot/linux = 4 patches (genericos)" || bad "set repo genericos = $NPOWN (esperado 4)"
 OWNVER="$PROJ/patches/buildroot/linux-$KVER"
 NVOWN=$(find "$OWNVER" -maxdepth 1 -name '*.patch' 2>/dev/null | wc -l)
-[ "$NVOWN" -eq 1 ] && ok "set repo patches/buildroot/linux-$KVER = 1 patch (versionado)" || bad "set repo versionado linux-$KVER = $NVOWN (esperado 1)"
+NVEXP=1
+[ "$KVER" = "5.12.4" ] && NVEXP=2
+[ "$NVOWN" -eq "$NVEXP" ] && ok "set repo patches/buildroot/linux-$KVER = $NVOWN patch (versionado, esperado $NVEXP)" || bad "set repo versionado linux-$KVER = $NVOWN (esperado $NVEXP)"
 [ "$NS9" -eq 4 ] && ok "SDK sincronizado: 4 patches propios 900X-*.patch en linux-$KVER" \
   || { [ "$NS9" -eq 0 ] && echo "  [INFO] SDK linux-$KVER sin 900X aún (build_kernel.sh no corrido para esta versión; árbol verificado arriba)" \
        || bad "SDK linux-$KVER 900X = $NS9 (esperado 0 o 4)"; }
@@ -108,10 +115,10 @@ if [ "$NS9" -eq 4 ] && [ "$NPOWN" -eq 4 ]; then
   [ -z "$DH" ] && ok "900X en SDK == copias repo (hash idéntico)" || bad "900X en SDK difieren del repo"
 fi
 if [ "$KVER" = "5.12.4" ]; then
-  [ "$NV9" -eq 1 ] && ok "SDK sincronizado: 1 patch versionado 910X en linux-5.12.4" \
+  [ "$NV9" -eq "$NVEXP" ] && ok "SDK sincronizado: $NV9 patches versionados 910X en linux-5.12.4" \
     || { [ "$NV9" -eq 0 ] && echo "  [INFO] SDK linux-5.12.4 sin 910X aún (build_kernel.sh no corrido; árbol verificado abajo)" \
-         || bad "SDK 910X = $NV9 (esperado 0 o 1)"; }
-  if [ "$NV9" -eq 1 ] && [ "$NVOWN" -eq 1 ]; then
+         || bad "SDK 910X = $NV9 (esperado 0 o $NVEXP)"; }
+  if [ "$NV9" -eq "$NVEXP" ] && [ "$NVOWN" -eq "$NVEXP" ]; then
     DV=$(diff <(cat "$OWNVER"/*.patch | sha256sum) <(cat "$P4"/910*.patch | sha256sum))
     [ -z "$DV" ] && ok "910X en SDK == copias repo (hash idéntico)" || bad "910X en SDK difieren del repo"
   fi

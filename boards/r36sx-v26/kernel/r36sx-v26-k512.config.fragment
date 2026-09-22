@@ -2,22 +2,13 @@
 # Se aplica ENCIMA de r36sx-v26.config.fragment (base compartida con 4.4.186):
 # BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES del defconfig k512 lista AMBOS archivos.
 #
-# MILESTONE-1 (9-4: serial boot). NO tocar el fragment compartido — regula el
-# known-good 4.4.186 fisicamente probado.
-#
-# musb: el glue hcdrivers/musb/hcusb.c (SOURCE/linux-drivers compartido, era-4.4)
-# usa struct timeval + do_gettimeofday() — ELIMINADAS en Linux 5.0. El set 5.12.4
-# del vendor NO adapta el glue (0008 solo toca el core mainline drivers/usb/musb/);
-# con HC_MUSB=y (default del vendor base 5.12.4) el build falla en:
-#   hcusb.c:1273: error: dereferencing pointer to incomplete type 'struct timeval'
-#   hcusb.c:1297: error: storage size of 'cur' isn't known
-#   hcusb.c:1317: error: implicit declaration of function 'do_gettimeofday'
-# Evidencia: el vendor nunca compilo musb en 5.12.4 (su propio base lo prende y su
-# propio codigo no compila). El port proper (ktime_get_*) = subfase 9-6.
-# Consecuencia milestone-1: kernel 5.12.4 SIN USB (la consola bootea de SD; USB
-# no participa del criterio serial-boot).
-# CONFIG_HC_MUSB is not set
-# CONFIG_USB_MUSB_HDRC is not set
+# 9-6a (2026-09-22): MUSB ACTIVADO tras el port 9102 (hcusb.c timeval->ktime,
+# patches/buildroot/linux-5.12.4/0002-musb-timeval-ktime-port.patch). Set = vendor
+# base 5.12.4: HC_MUSB (glue hcdrivers) + USB_MUSB_HDRC (core, parcheado por vendor
+# 0008) + USB_MUSB_HOST (modo host: almacenamiento USB). Gadget (RNDIS/ADB) = 9-6e/f.
+CONFIG_HC_MUSB=y
+CONFIG_USB_MUSB_HDRC=y
+CONFIG_USB_MUSB_HOST=y
 
 # MMC/SD (9-4 post-physical-evidence fix, 2026-09-22): el base vendor 5.12.4 NO trae
 # MMC (sus productos no usan SD) -> /dev/mmcblk0p1 jamas aparece -> S99app se cuelga
