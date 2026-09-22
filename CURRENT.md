@@ -34,7 +34,7 @@ Direction discussion: multi-console, ecosystem features, or Kernel 5.12.4 (Phase
 - treefrog/ = 41 items (stack + multi-console drivers + apps)
 - Boot ~8s
 - Recovery kit verified twice
-- Full backup: sd-full.tar + D:/R36SX/nor-dump-20260919/
+- Full backup: D:/R36SX/sd-full-backups/2026-09-21_phase8-known-good/ + D:/R36SX/nor-dump-20260919/
 
 ## BUILD STATUS
 
