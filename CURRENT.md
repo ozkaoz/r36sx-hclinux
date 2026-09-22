@@ -67,14 +67,4 @@ None technical.
 
 ## NEXT EXACT ACTION
 
-9-6a: MUSB/USB port (ROADMAP 9-6 IN PROGRESS — kernel 5.12.4 to max development point before any migration decision). Port hcusb.c timeval/do_gettimeofday -> ktime API (9102 version-gated patch), flip k512 fragment musb lines, build, gates, deploy, physical test (USB host storage). Then 9-6b DTB, 9-6c display latency, 9-6d WiFi, 9-6e RNDIS, 9-6f ADB. After 9-6: DECISION — 5.15 LTS migration vs boot restructure (cubegm/ elimination requires bootloader re-open = post-mortem CLOSED territory, explicit authorization required).
-
-## QUICK REFERENCE
-
-| Subsystem | See |
-|-----------|-----|
-| TreeFrogUI contract | docs/TREEFROG_UI_CONTRACT.md |
-| Bootloader post-mortem | docs/experiments/2026-09-20_postmortem-brickeo-bootloader.md |
-| ADR-012 (ABI) / ADR-013 (diag opt-in) / ADR-014 (own patches 900X) | DECISIONS.md |
-| NOR recovery kit | D:/R36SX/hcprogrammer-restore-kit/ |
-| Build manual | docs/BUILD_MANUAL.md |
+9-6a DEPLOYED (user-authorized class F, 2026-09-22): cubegm/vmlinux.uImage = 4f97279f (musb ON: HC_MUSB+HDRC+HOST; ports 9101+9102). Fresh FULL SD backup taken FIRST: D:/R36SX/sd-full-backups/2026-09-22_k512-knowngood/ (4553/4553 manifest MATCH, tar sha 7ba2fc3a, critical kernel 9731d6a5) — the phase-9-4 known-good restore point. Rollback artifact: artifacts/r36sx-v26/rollback-k512-9731d6a5.uImage.bak. diag.enabled ON for USB evidence. TEST: boot->menu (regression) -> insert USB stick -> wait ~20s -> power off -> SD to PC -> read musb/USB probe evidence in boottrace.
