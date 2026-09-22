@@ -9,7 +9,8 @@ r36sx-hclinux — reproducible Linux/HClinux platform for HiChip consoles (HC16x
 
 ## CURRENT PHASE
 
-**PHASE 9-4 MILESTONE-1: PHYSICAL PASS (2026-09-22). Kernel 5.12.4 boots console to TreeFrogUI menu.**
+**PHASE 9-4 COMPLETE: CLEAN PHYSICAL PASS (2026-09-22). Kernel 5.12.4 = NEW KNOWN-GOOD.**
+Full criteria met on kernel-5-only SD (kernel-4 purged): TreeFrogUI menu + AUDIO OK (ADR-012 ABI pads validated on 5.12.4 — AUDDEC path physical pass) + input/navigation OK (9101 timer port + HC_INPUT family) + emulator entry/exit OK. Boot ~10s.
 - User-verified visual: menu reached + BUTTON NAVIGATION OK (input drivers + 9101 timer port work), boot ~10s (≈ 4.4 known-good 8s)
 - Test history: t1 (first deploy, no MMC in vendor base): logo-frozen (S99app wait_for_media_ready infinite loop, zero SD writes). t2 (MMC+HC families+port 9101): black screen — display takes LONGER to init on 5.12; user powered off early; boottrace proved FULL boot (SD mounted, amprpc flowing, UI blit#1). t3 (same kernel, waited): MENU OK.
 - Persistentmem/hdmi/panel virtuart lines = cosmetic constants (identical in 4.4-working 9m trace evidence-9m-recovery-boottrace.log)
@@ -47,7 +48,9 @@ r36sx-hclinux — reproducible Linux/HClinux platform for HiChip consoles (HC16x
 
 ## BUILD STATUS
 
-KERNEL+ROOTFS: BUILD PASS (TOOLCHAIN/PATCH/DTB gates PASS).
+KERNEL 5.12.4 (k512 variant): BUILD PASS + CLEAN PHYSICAL PASS (menu/audio/input/emulators; 26 patches = 21 vendor + 4 own-900X + 1 own-9101).
+KERNEL 4.4.186: BUILD PASS (superseded on SD; buildable via base defconfig — deprecation decision pending).
+ROOTFS: deterministic embed (v6 flow). Gates: TOOLCHAIN/PATCH PASS.
 BOOTLOADER: NOT REPLACEABLE (2 attempts, 2 bricks — use factory bootloader).
 
 ## PHYSICAL STATUS
@@ -64,7 +67,7 @@ None technical.
 
 ## NEXT EXACT ACTION
 
-User confirmation test: kernel-5-only SD (kernel-4 purged). If PASS: remove cubegm/diag.enabled (production state), then 9-5 = audio/ABI validation (menu sounds / game audio with ADR-012 pads on 5.12) + USB/musb port (9-6). Boot-time/display-latency investigation (t2 black = slow display init) as UX polish.
+9-6 (next, optional priority order): (a) musb/USB port for 5.12 (hcusb.c timeval/do_gettimeofday -> ktime API; USB storage + gadgets currently OFF) + (b) DTB lineage reconciliation (build DTB b9b800c8 with uart@1/pinmux nodes vs SD-proven 1258f1eb) + (c) display-init latency polish (t2 evidence: display slower than 4.4 — investigate AVP-side timeouts) + (d) 4.4.186 kernel deprecation decision (keep buildable or remove defconfig).
 
 ## QUICK REFERENCE
 

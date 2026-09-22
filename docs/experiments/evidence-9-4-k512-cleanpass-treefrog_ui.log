@@ -1,0 +1,519 @@
+TFDBG start pid=1219 argv1=/mnt/sdcard/cubegm/cores/frogui_libretro.so next-bin=/mnt/sdcard/cubegm/picoarch
+SF3000: /dev/dis ioctl ret=0
+sf3000_fb_init: FBIOPUT ret=0
+SF3000 fb0: 720x1280 (virtual 720x2560) bpp=32 line=2880 smem=14749264 mem=0x76d22000
+SF3000 fb0: xoffset=0 yoffset=0 rotate=0 type=0 visual=2
+SF3000 fb0: pixel r=16/8 g=8/8 b=0/8 a=24/8
+SF3000 fb0: write-readback test: wrote 0xDEADBEEF got 0xDEADBEEF (OK)
+video_drivers_init:51
+video_drivers_init:74, colormode: 1
+color_format is 1
+game rotate:0
+init rotate:0
+init ver_flip:0
+init hor_flip:0
+rotate:0
+ver_flip:0
+hor_flip:0
+create msg id: 0
+Init gpio_lib success.
+******************hcge_driver_init:40***********************
+create msg id: 1
+Initialize fb, fbnum 7, width 1280, height 720, bits_per_pixel 16
+w: 1280
+h: 720
+screen w: 640
+screen h: 480
+scale.h_div = 1280
+scale.v_div = 720
+scale.h_mul = 640
+scale.v_mul = 480
+rotate:0
+video_drivers_init:76, colormode: 1
+hwdisp: HW path active (init rv=36 g_render=0x76d21640 ctx=0x12246d8)
+video_driver_set_aspect_ratio 4:3
+is_full_screen:1
+sf3000_fb_init: hwdisp early-init ok
+SDL surface: 320x240 bpp=16 pitch=640
+input: new device #0 "sdl:keys"
+input: async-only devices detected..
+# drv probed binds name
+0   0      y     y sdl:keys
+SF3000 FN: HAS_FN=YES (bit 16 → SDLK_F11 FN, data-driven)
+SF3000 input: joy_key shm OK, initial keys=0x00000000
+SF3000 input: loaded keymap
+libpicofe/readpng.c: failed to open: /mnt/sdcard/cubegm/skin/font.png
+libpicofe/readpng.c: failed to open: /mnt/sdcard/cubegm/skin/selector.png
+found skin.txt
+skin.txt: parse error: background_color=0xF74131
+
+TFDBG video_refresh pid=1219 n=1 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=1 size=640x480 pitch=1280 fmt=2
+TFDBG blit#1 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+is_full_screen:1
+color_format is 1
+Init gpio_lib success.
+******************hcge_driver_init:40***********************
+Initialize fb, fbnum 23, width 640, height 480, bits_per_pixel 16
+w: 640
+h: 480
+screen w: 640
+screen h: 480
+scale.h_div = 640
+scale.v_div = 480
+scale.h_mul = 640
+scale.v_mul = 480
+rotate:0
+video_driver_setting 640 480 1 img_w:640 img_h:480 img_p:1280
+TFDBG video_refresh pid=1219 n=2 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=2 size=640x480 pitch=1280 fmt=2
+TFDBG blit#2 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=3 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=3 size=640x480 pitch=1280 fmt=2
+TFDBG blit#3 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=4 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=4 size=640x480 pitch=1280 fmt=2
+TFDBG blit#4 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=5 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=5 size=640x480 pitch=1280 fmt=2
+TFDBG blit#5 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=6 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=6 size=640x480 pitch=1280 fmt=2
+TFDBG blit#6 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=7 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=7 size=640x480 pitch=1280 fmt=2
+TFDBG blit#7 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=8 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=8 size=640x480 pitch=1280 fmt=2
+TFDBG blit#8 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=9 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=9 size=640x480 pitch=1280 fmt=2
+TFDBG blit#9 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=10 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=10 size=640x480 pitch=1280 fmt=2
+TFDBG blit#10 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=11 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=11 size=640x480 pitch=1280 fmt=2
+TFDBG blit#11 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=12 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=12 size=640x480 pitch=1280 fmt=2
+TFDBG blit#12 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=13 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=13 size=640x480 pitch=1280 fmt=2
+TFDBG blit#13 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=14 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=14 size=640x480 pitch=1280 fmt=2
+TFDBG blit#14 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=15 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=15 size=640x480 pitch=1280 fmt=2
+TFDBG blit#15 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=16 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=16 size=640x480 pitch=1280 fmt=2
+TFDBG blit#16 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=17 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=17 size=640x480 pitch=1280 fmt=2
+TFDBG blit#17 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=18 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=18 size=640x480 pitch=1280 fmt=2
+TFDBG blit#18 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=19 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=19 size=640x480 pitch=1280 fmt=2
+TFDBG blit#19 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=20 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=20 size=640x480 pitch=1280 fmt=2
+TFDBG blit#20 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=21 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=21 size=640x480 pitch=1280 fmt=2
+TFDBG blit#21 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=22 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=22 size=640x480 pitch=1280 fmt=2
+TFDBG blit#22 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=23 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=23 size=640x480 pitch=1280 fmt=2
+TFDBG blit#23 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=24 data=0x6e317008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=24 size=640x480 pitch=1280 fmt=2
+TFDBG blit#24 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG start pid=1219 argv1=/mnt/sdcard/cubegm/cores/gpsp_libretro.so next-bin=/mnt/sdcard/cubegm/picoarch_hi
+SF3000: /dev/dis ioctl ret=0
+sf3000_fb_init: FBIOPUT ret=0
+SF3000 fb0: 720x1280 (virtual 720x2560) bpp=32 line=2880 smem=14749264 mem=0x76d3e000
+SF3000 fb0: xoffset=0 yoffset=0 rotate=0 type=0 visual=2
+SF3000 fb0: pixel r=16/8 g=8/8 b=0/8 a=24/8
+SF3000 fb0: write-readback test: wrote 0xDEADBEEF got 0xDEADBEEF (OK)
+video_drivers_init:51
+video_drivers_init:74, colormode: 1
+color_format is 1
+game rotate:0
+init rotate:0
+init ver_flip:0
+init hor_flip:0
+rotate:0
+ver_flip:0
+hor_flip:0
+create msg id: 0
+Init gpio_lib success.
+******************hcge_driver_init:40***********************
+create msg id: 1
+Initialize fb, fbnum 7, width 1280, height 720, bits_per_pixel 16
+w: 1280
+h: 720
+screen w: 640
+screen h: 480
+scale.h_div = 1280
+scale.v_div = 720
+scale.h_mul = 640
+scale.v_mul = 480
+rotate:0
+video_drivers_init:76, colormode: 1
+hwdisp: HW path active (init rv=36 g_render=0x76d3d640 ctx=0x210a3690)
+video_driver_set_aspect_ratio 4:3
+is_full_screen:1
+sf3000_fb_init: hwdisp early-init ok
+SDL surface: 320x240 bpp=16 pitch=640
+input: new device #0 "sdl:keys"
+input: async-only devices detected..
+# drv probed binds name
+0   0      y     y sdl:keys
+SF3000 FN: HAS_FN=YES (bit 16 → SDLK_F11 FN, data-driven)
+SF3000 input: joy_key shm OK, initial keys=0x00000000
+SF3000 input: loaded keymap
+libpicofe/readpng.c: failed to open: /mnt/sdcard/cubegm/skin/font.png
+libpicofe/readpng.c: failed to open: /mnt/sdcard/cubegm/skin/selector.png
+found skin.txt
+skin.txt: parse error: background_color=0xF74131
+
+sound_driver_init:251
+p->fd = c
+AUDDEC_START
+audio buffer size is 655359 bytes
+volume is 6
+set volume to 6
+sound_driver_deinit:264
+sound_driver_init:251
+p->fd = c
+AUDDEC_START
+audio buffer size is 655359 bytes
+volume is 6
+set volume to 6
+TFDBG video_refresh pid=1219 n=1 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=1 size=240x160 pitch=480 fmt=2
+TFDBG blit#1 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+set enhance susscess
+is_full_screen:1
+color_format is 1
+Init gpio_lib success.
+******************hcge_driver_init:40***********************
+Initialize fb, fbnum 23, width 640, height 480, bits_per_pixel 16
+w: 640
+h: 480
+screen w: 640
+screen h: 480
+scale.h_div = 640
+scale.v_div = 480
+scale.h_mul = 640
+scale.v_mul = 480
+rotate:0
+video_driver_setting 640 480 1 img_w:240 img_h:160 img_p:480
+TFDBG video_refresh pid=1219 n=2 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=2 size=240x160 pitch=480 fmt=2
+TFDBG blit#2 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=3 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=3 size=240x160 pitch=480 fmt=2
+TFDBG blit#3 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=4 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=4 size=240x160 pitch=480 fmt=2
+TFDBG blit#4 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=5 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=5 size=240x160 pitch=480 fmt=2
+TFDBG blit#5 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=6 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=6 size=240x160 pitch=480 fmt=2
+TFDBG blit#6 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=7 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=7 size=240x160 pitch=480 fmt=2
+TFDBG blit#7 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=8 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=8 size=240x160 pitch=480 fmt=2
+TFDBG blit#8 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=9 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=9 size=240x160 pitch=480 fmt=2
+TFDBG blit#9 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=10 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=10 size=240x160 pitch=480 fmt=2
+TFDBG blit#10 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=11 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=11 size=240x160 pitch=480 fmt=2
+TFDBG blit#11 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=12 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=12 size=240x160 pitch=480 fmt=2
+TFDBG blit#12 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=13 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=13 size=240x160 pitch=480 fmt=2
+TFDBG blit#13 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=14 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=14 size=240x160 pitch=480 fmt=2
+TFDBG blit#14 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=15 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=15 size=240x160 pitch=480 fmt=2
+TFDBG blit#15 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=16 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=16 size=240x160 pitch=480 fmt=2
+TFDBG blit#16 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=17 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=17 size=240x160 pitch=480 fmt=2
+TFDBG blit#17 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=18 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=18 size=240x160 pitch=480 fmt=2
+TFDBG blit#18 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=19 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=19 size=240x160 pitch=480 fmt=2
+TFDBG blit#19 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=20 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=20 size=240x160 pitch=480 fmt=2
+TFDBG blit#20 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=21 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=21 size=240x160 pitch=480 fmt=2
+TFDBG blit#21 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=22 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=22 size=240x160 pitch=480 fmt=2
+TFDBG blit#22 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=23 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=23 size=240x160 pitch=480 fmt=2
+TFDBG blit#23 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=24 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG plat_video_process pid=1219 n=24 size=240x160 pitch=480 fmt=2
+TFDBG blit#24 w=240 h=160 pitch=480 filter=1 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=601 data=0x210bbe40 size=240x160 pitch=480 quit=0
+TFDBG blit#1 w=320 h=240 pitch=640 filter=1 scale=1 use_hw=1
+color_format is 1
+Init gpio_lib success.
+******************hcge_driver_init:40***********************
+Initialize fb, fbnum 23, width 640, height 480, bits_per_pixel 16
+w: 640
+h: 480
+screen w: 640
+screen h: 480
+scale.h_div = 640
+scale.v_div = 480
+scale.h_mul = 640
+scale.v_mul = 480
+rotate:0
+video_driver_setting 640 480 1 img_w:640 img_h:480 img_p:1280
+TFDBG blit#2 w=320 h=240 pitch=640 filter=1 scale=1 use_hw=1
+TFDBG blit#3 w=320 h=240 pitch=640 filter=1 scale=1 use_hw=1
+TFDBG blit#4 w=320 h=240 pitch=640 filter=1 scale=1 use_hw=1
+sound_driver_deinit:264
+TFDBG start pid=1219 argv1=/mnt/sdcard/cubegm/cores/frogui_libretro.so next-bin=/mnt/sdcard/cubegm/picoarch
+SF3000: /dev/dis ioctl ret=0
+sf3000_fb_init: FBIOPUT ret=0
+SF3000 fb0: 720x1280 (virtual 720x2560) bpp=32 line=2880 smem=14749264 mem=0x76d3a000
+SF3000 fb0: xoffset=0 yoffset=0 rotate=0 type=0 visual=2
+SF3000 fb0: pixel r=16/8 g=8/8 b=0/8 a=24/8
+SF3000 fb0: write-readback test: wrote 0xDEADBEEF got 0xDEADBEEF (OK)
+video_drivers_init:51
+video_drivers_init:74, colormode: 1
+color_format is 1
+game rotate:0
+init rotate:0
+init ver_flip:0
+init hor_flip:0
+rotate:0
+ver_flip:0
+hor_flip:0
+create msg id: 0
+Init gpio_lib success.
+******************hcge_driver_init:40***********************
+create msg id: 1
+Initialize fb, fbnum 7, width 1280, height 720, bits_per_pixel 16
+w: 1280
+h: 720
+screen w: 640
+screen h: 480
+scale.h_div = 1280
+scale.v_div = 720
+scale.h_mul = 640
+scale.v_mul = 480
+rotate:0
+video_drivers_init:76, colormode: 1
+hwdisp: HW path active (init rv=36 g_render=0x76d39640 ctx=0x24b1690)
+video_driver_set_aspect_ratio 4:3
+is_full_screen:1
+sf3000_fb_init: hwdisp early-init ok
+SDL surface: 320x240 bpp=16 pitch=640
+input: new device #0 "sdl:keys"
+input: async-only devices detected..
+# drv probed binds name
+0   0      y     y sdl:keys
+SF3000 FN: HAS_FN=YES (bit 16 → SDLK_F11 FN, data-driven)
+SF3000 input: joy_key shm OK, initial keys=0x00000000
+SF3000 input: loaded keymap
+libpicofe/readpng.c: failed to open: /mnt/sdcard/cubegm/skin/font.png
+libpicofe/readpng.c: failed to open: /mnt/sdcard/cubegm/skin/selector.png
+found skin.txt
+skin.txt: parse error: background_color=0xF74131
+
+TFDBG video_refresh pid=1219 n=1 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=1 size=640x480 pitch=1280 fmt=2
+TFDBG blit#1 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+is_full_screen:1
+color_format is 1
+Init gpio_lib success.
+******************hcge_driver_init:40***********************
+Initialize fb, fbnum 23, width 640, height 480, bits_per_pixel 16
+w: 640
+h: 480
+screen w: 640
+screen h: 480
+scale.h_div = 640
+scale.v_div = 480
+scale.h_mul = 640
+scale.v_mul = 480
+rotate:0
+video_driver_setting 640 480 1 img_w:640 img_h:480 img_p:1280
+TFDBG video_refresh pid=1219 n=2 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=2 size=640x480 pitch=1280 fmt=2
+TFDBG blit#2 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=3 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=3 size=640x480 pitch=1280 fmt=2
+TFDBG blit#3 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=4 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=4 size=640x480 pitch=1280 fmt=2
+TFDBG blit#4 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=5 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=5 size=640x480 pitch=1280 fmt=2
+TFDBG blit#5 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=6 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=6 size=640x480 pitch=1280 fmt=2
+TFDBG blit#6 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=7 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=7 size=640x480 pitch=1280 fmt=2
+TFDBG blit#7 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=8 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=8 size=640x480 pitch=1280 fmt=2
+TFDBG blit#8 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=9 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=9 size=640x480 pitch=1280 fmt=2
+TFDBG blit#9 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=10 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=10 size=640x480 pitch=1280 fmt=2
+TFDBG blit#10 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=11 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=11 size=640x480 pitch=1280 fmt=2
+TFDBG blit#11 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=12 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=12 size=640x480 pitch=1280 fmt=2
+TFDBG blit#12 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=13 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=13 size=640x480 pitch=1280 fmt=2
+TFDBG blit#13 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=14 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=14 size=640x480 pitch=1280 fmt=2
+TFDBG blit#14 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=15 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=15 size=640x480 pitch=1280 fmt=2
+TFDBG blit#15 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=16 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=16 size=640x480 pitch=1280 fmt=2
+TFDBG blit#16 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=17 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=17 size=640x480 pitch=1280 fmt=2
+TFDBG blit#17 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=18 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=18 size=640x480 pitch=1280 fmt=2
+TFDBG blit#18 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=19 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=19 size=640x480 pitch=1280 fmt=2
+TFDBG blit#19 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=20 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=20 size=640x480 pitch=1280 fmt=2
+TFDBG blit#20 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=21 data=0x6e34f008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=21 size=640x480 pitch=1280 fmt=2
+TFDBG blit#21 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=22 data=0x6dbba008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=22 size=640x480 pitch=1280 fmt=2
+TFDBG blit#22 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=23 data=0x6dbba008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=23 size=640x480 pitch=1280 fmt=2
+TFDBG blit#23 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+TFDBG video_refresh pid=1219 n=24 data=0x6dbba008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1219 n=24 size=640x480 pitch=1280 fmt=2
+TFDBG blit#24 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+use ffmpeg aac_fixed decoder, type 1, codec_id 86018
+start viddec
+local stream
+
+stream_component_open codec_id 0x15002
+
+stream_component_open codec_id 0x1b
+stream_close enter
+rotate.angle 0, rotate.mirror_enable 0,
+stream_close out
+TFDBG start pid=1982 argv1=/mnt/sdcard/cubegm/cores/frogui_libretro.so next-bin=/mnt/sdcard/cubegm/picoarch
+SF3000: /dev/dis ioctl ret=0
+sf3000_fb_init: FBIOPUT ret=0
+SF3000 fb0: 720x1280 (virtual 720x2560) bpp=32 line=2880 smem=14749264 mem=0x76d88000
+SF3000 fb0: xoffset=0 yoffset=0 rotate=0 type=0 visual=2
+SF3000 fb0: pixel r=16/8 g=8/8 b=0/8 a=24/8
+SF3000 fb0: write-readback test: wrote 0xDEADBEEF got 0xDEADBEEF (OK)
+video_drivers_init:51
+video_drivers_init:74, colormode: 1
+color_format is 1
+game rotate:0
+init rotate:0
+init ver_flip:0
+init hor_flip:0
+rotate:0
+ver_flip:0
+hor_flip:0
+create msg id: 0
+Init gpio_lib success.
+******************hcge_driver_init:40***********************
+create msg id: 1
+Initialize fb, fbnum 7, width 1280, height 720, bits_per_pixel 16
+w: 1280
+h: 720
+screen w: 640
+screen h: 480
+scale.h_div = 1280
+scale.v_div = 720
+scale.h_mul = 640
+scale.v_mul = 480
+rotate:0
+video_drivers_init:76, colormode: 1
+hwdisp: HW path active (init rv=36 g_render=0x76d87640 ctx=0x11246d8)
+video_driver_set_aspect_ratio 4:3
+is_full_screen:1
+sf3000_fb_init: hwdisp early-init ok
+SDL surface: 320x240 bpp=16 pitch=640
+input: new device #0 "sdl:keys"
+input: async-only devices detected..
+# drv probed binds name
+0   0      y     y sdl:keys
+SF3000 FN: HAS_FN=YES (bit 16 → SDLK_F11 FN, data-driven)
+SF3000 input: joy_key shm OK, initial keys=0x00000000
+SF3000 input: loaded keymap
+libpicofe/readpng.c: failed to open: /mnt/sdcard/cubegm/skin/font.png
+libpicofe/readpng.c: failed to open: /mnt/sdcard/cubegm/skin/selector.png
+found skin.txt
+skin.txt: parse error: background_color=0xF74131
+
+TFDBG video_refresh pid=1982 n=1 data=0x6e397008 size=640x480 pitch=1280 quit=0
+TFDBG plat_video_process pid=1982 n=1 size=640x480 pitch=1280 fmt=2
+TFDBG blit#1 w=640 h=480 pitch=1280 filter=0 scale=1 use_hw=1
+is_full_screen:1
+color_format is 1
+Init gpio_lib success.
+******************hcge_driver_init:40***********************
+Initialize fb, fbnum 23, width 640, height 480, bits_per_pixel 16
+w: 640
+h: 480
+screen w: 640
+screen h: 480
+scale.h_div = 640
+scale.v_div = 480
+scale.h_mul = 640
+scale.v_mul = 480
+rotate:0
+video_driver_setting 640 480 1 img_w:640 img_h:480 img_p:1280

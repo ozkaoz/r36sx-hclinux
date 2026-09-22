@@ -1,0 +1,62 @@
+VER:VIDDRIVER(Dec 26 2024 15:11:15)
+open /dev/persistentmem failed
+get tvtype in sysdata fail,from dts:15
+KdwaYewCiBETqFZPvtZFqORuSKMqoSzp 0
+b_hdmi_output = 1
+data = 0x5780074
+data = 0x1f00010
+b_hdmi_output = 1
+open /dev/persistentmem failed
+get_dts_panel_info 67 109 19 1 640 480
+Unplug_card_display_display_init 310
+CFG 48K
+hc1600a@dbE3100v20# hdmi_tx_reg_set_phy_clk_dat_pwdown_hpg
+HDMI WAIT PHY RDY TIME OUT
+
+hc1600a@dbE3100v20# 
+hc1600a@dbE3100v20# help
+
+Commands available:
+  help                 Show available cmds
+  exit                 Exit from current cmd set
+  history              Show history cmds
+  reset                reset system
+  dumpstack            memory status entry
+  quit                 Quit virtual uart console
+  gpio                 gpio pin val
+  elog                 elog cmds entry
+  mem                  memory status entry
+  softirqresched       set softirq resched priority
+  softirq              set softirq priority
+  sde                  SDE tool
+  dither               
+  test_mem_wr_speed    test mem write speed
+  test_mem_rd_speed    test mem read speed
+  swxf                 swxf
+  reset_hrx_audio      reset hdmi rx audio
+  os                   os cmds entry
+  nsh                  Enter NSH cmds
+  drcoff               drcoff
+  drcon                drcon
+  i2soinfo             i2soinfo()
+  enejtag              enejtag()
+  disejtag             disejtag()
+hc1600a@dbE3100v20# 
+hc1600a@dbE3100v20# ps
+Invalid command "ps"
+hc1600a@dbE3100v20# 
+hc1600a@dbE3100v20# ctx->block_align 0, ctx->bitdepth 16
+init:active 0x8c0caa00
+ctx->block_align 0, ctx->bitdepth 16
+init:active 0x8c0ca800
+open /dev/sndC0i2so 9
+CFG 48K
+audio_info.ch_status 0x2000004
+VER:H264(Dec 26 2024 15:11:15)
+allocsz = 0x321b000
+guest_frame_rate ms_diff 33 30000 29970 
+ctx->block_align 0, ctx->bitdepth 16
+init:active 0x8c0caa00
+open /dev/sndC0i2so 12
+CFG 441K
+audio_info.ch_status 0x4
