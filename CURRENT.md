@@ -67,7 +67,7 @@ None technical.
 
 ## NEXT EXACT ACTION
 
-9-6 (next, optional priority order): (a) musb/USB port for 5.12 (hcusb.c timeval/do_gettimeofday -> ktime API; USB storage + gadgets currently OFF) + (b) DTB lineage reconciliation (build DTB b9b800c8 with uart@1/pinmux nodes vs SD-proven 1258f1eb) + (c) display-init latency polish (t2 evidence: display slower than 4.4 — investigate AVP-side timeouts) + (d) 4.4.186 kernel deprecation decision (keep buildable or remove defconfig).
+9-6a: MUSB/USB port (ROADMAP 9-6 IN PROGRESS — kernel 5.12.4 to max development point before any migration decision). Port hcusb.c timeval/do_gettimeofday -> ktime API (9102 version-gated patch), flip k512 fragment musb lines, build, gates, deploy, physical test (USB host storage). Then 9-6b DTB, 9-6c display latency, 9-6d WiFi, 9-6e RNDIS, 9-6f ADB. After 9-6: DECISION — 5.15 LTS migration vs boot restructure (cubegm/ elimination requires bootloader re-open = post-mortem CLOSED territory, explicit authorization required).
 
 ## QUICK REFERENCE
 
