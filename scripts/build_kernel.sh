@@ -2,10 +2,23 @@
 # build_kernel.sh <board> [variant] — Fase 4B+: build kernel con board propia del repo.
 # Flujo reproducible: repo (fuente de verdad) -> workspace SDK -> Buildroot.
 # Uso: ./scripts/build_kernel.sh r36sx-v26          (kernel del defconfig base: 4.4.186)
-#      ./scripts/build_kernel.sh r36sx-v26 k512     (defconfig hichip_hc16xx_r36sx_v26_k512: kernel 5.12.4)
-# Fase 9-1 (ADR-014): paso 3b — parches kernel PROPIOS (patches/buildroot/linux/) se
-# sincronizan a SDK patches/linux-<version>/ con prefijo 900X (orden posterior al set
-# vendor 00XX; archivos target: SOURCE/linux-drivers, agnósticos de versión).
+#      ./scripts/build_kernel.sh r36sx-v26 k512     (defconfig k512: kernel 5.12.4)
+#
+# Fase 9-1 (ADR-014): paso 3b — parches kernel PROPIOS (patches/buildroot/linux/) ->
+# SDK patches/linux-<version>/ prefijo 900X (targets: SOURCE/linux-drivers, agnósticos).
+#
+# Fase 9-3.1: embed DETERMINISTA. En el buildroot del SDK:
+#   - `world` == `target-post-image` (Makefile:600) — SOLO la cadena de imágenes.
+#   - `rootfs-cpio` también es solo imagen+finalize: NO construye packages.
+#   - Los packages (hcfota, libhudi, liblvgl, kmod, busybox-configs...) se
+#     construyen e instalan SOLO bajo el GOAL DEFAULT (`make` sin target).
+#   Flujo correcto: make default (todo) -> cp rootfs.cpio (FULL) -> linux-rebuild
+#   (re-embebe). El flujo pre-9-3.1 empaquetaba mid-build: el cpio embebido perdía
+#   los packages tardíos (evidencia: diff cpio embebido 8e vs k512, 2026-09-22).
+#
+# Fase 9-3.2: overlays con re-finalize forzado — el marker .fase8-target-cleaned se
+# borra manualmente (o por git checkout) cuando el overlay cambia; el próximo build
+# re-copia overlays desde cero (mecanismo original fase-8 intacto).
 set -euo pipefail
 BOARD="${1:?uso: build_kernel.sh r36sx-v26 [variant]}"
 VARIANT="${2:-}"
@@ -15,6 +28,10 @@ R="$(cd "$(dirname "$BASH_SOURCE")/.." && pwd)"
 TAG="$BOARD${VARIANT:+-$VARIANT}"
 O="$W/build/$TAG"
 LOG="$W/logs/${TAG}-build_$(date +%Y%m%d_%H%M%S).log"
+
+benign_postimage() {
+  tail -8 "$LOG" | grep -qE 'bootloader.bin not found|bigger than partition|target-post-image'
+}
 
 # 1. validar insumos del repo
 DTS_REPO="$R/boards/$BOARD/dts/$BOARD.dts"
@@ -31,31 +48,24 @@ BD="$S/board/hichip/hc16xx/${BOARD//-/_}"
 mkdir -p "$BD/dts" "$BD/kernel"
 cp "$DTS_REPO" "$BD/dts/$BOARD.dts"
 cp "$DEF_REPO" "$S/configs/$(basename "$DEF_REPO")"
-# fragmento de kernel config (board-specific deltas, p.ej. CONFIG_CHECK_ADC) -> workspace
 KFRAG="$R/boards/$BOARD/kernel/$BOARD.config.fragment"
 [ -f "$KFRAG" ] && cp "$KFRAG" "$BD/kernel/$BOARD.config.fragment"
-# Fase 9-3: fragment de variante (deltas k512-only, p.ej. musb off) — el defconfig
-# de la variante lista AMBOS fragments en BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES.
 KFRAG_V="$R/boards/$BOARD/kernel/$BOARD${VARIANT:+-$VARIANT}.config.fragment"
 [ -f "$KFRAG_V" ] && cp "$KFRAG_V" "$BD/kernel/"
-# rootfs-overlay de la board (p.ej. etc/init.d/S99app para lanzar la UI) -> workspace
 OVERLAY_SRC="$R/boards/$BOARD/rootfs-overlay"
 if [ -d "$OVERLAY_SRC" ]; then
   mkdir -p "$BD/rootfs-overlay"
   cp -r "$OVERLAY_SRC"/. "$BD/rootfs-overlay/"
 fi
-# Fase 8a: overlay propio minimo -> workspace (el defconfig lo referencia)
 OVERLAY_OWN="$R/boards/$BOARD/rootfs-overlay-own"
 if [ -d "$OVERLAY_OWN" ]; then
   mkdir -p "$BD/rootfs-overlay-own"
   cp -r "$OVERLAY_OWN"/. "$BD/rootfs-overlay-own/"
 fi
-# Fase D-2b: bootloader propio — bl defconfig de la board -> workspace SDK
 BL_CFG="$R/boards/$BOARD/bootloader/${BOARD}_bl_defconfig"
 if [ -f "$BL_CFG" ]; then
   mkdir -p "$BD/bootloader"
   cp "$BL_CFG" "$BD/${BOARD}_bl_defconfig"
-  # DDR-init de fabrica (del dump NOR, D:\R36SX\nor-dump-20260919, sha verificado en reposicion)
   if [ -f "$BD/ddrinit/ddrinit-factory-12288.abs" ]; then
     H=$(sha256sum "$BD/ddrinit/ddrinit-factory-12288.abs" | cut -c1-16)
     [ "$H" = "d944d9afb427a404" ] || { echo "ERROR: DDR-init de fabrica hash invalido ($H)"; exit 1; }
@@ -66,8 +76,6 @@ if [ -f "$BL_CFG" ]; then
 fi
 
 # 3b. Fase 9-1 (ADR-014): parches kernel PROPIOS repo -> SDK patches/linux-<version>/
-# (prefijo 900X: aplican tras el set vendor 00XX; targets = SOURCE/linux-drivers,
-#  agnósticos de versión de kernel — sirve para 4.4.186 y 5.12.4 por igual)
 KVER=$(sed -n 's/^BR2_LINUX_KERNEL_VERSION="\([^"]*\)"/\1/p' "$DEF_REPO")
 OWNPATCH="$R/patches/buildroot/linux"
 if [ -n "$KVER" ] && [ -d "$OWNPATCH" ]; then
@@ -78,9 +86,6 @@ if [ -n "$KVER" ] && [ -d "$OWNPATCH" ]; then
     NP=$((NP+1))
   done
   [ "$NP" -gt 0 ] && echo "own-patches: $NP -> SDK patches/linux-$KVER/ (kernel $KVER, prefijo 900X)"
-  # yaffs2: el hook PRE_PATCH del SDK (LINUX_PATCH_HICHIP_DRIVERS) hace cd patches/linux/yaffs2
-  # INCONDICIONALMENTE — el set 5.12.4 no lo trae. Integración INERTE (YAFFS off en ambos
-  # base configs, verificado 2026-09-22): se copia al dir de versión para que el hook no falle.
   if [ "$KVER" != "4.4.186" ] && [ -d "$S/patches/linux-4.4.186/yaffs2" ] && [ ! -d "$S/patches/linux-$KVER/yaffs2" ]; then
     cp -r "$S/patches/linux-4.4.186/yaffs2" "$S/patches/linux-$KVER/"
     echo "yaffs2: integrado a patches/linux-$KVER/ (inerte: CONFIG_YAFFS off en base config)"
@@ -95,33 +100,49 @@ export HOST_EXTRACFLAGS="-fcommon"
 mkdir -p "$O" ; cd "$S/buildroot"
 make O="$O" BR2_EXTERNAL="$S" "$(basename "$DEF_REPO")" > "$LOG" 2>&1
 
-# Fase 8a: generar ROOTFS PROPIO (Buildroot cpio) si el fragmento lo referencia
 if grep -q "rootfs-own.cpio" "$KFRAG" 2>/dev/null; then
-  # limpiar target contaminado de overlays anteriores (una sola vez)
+  # limpiar target contaminado de overlays anteriores (una sola vez; para forzar
+  # re-finalize tras un cambio de overlay: rm del marker a mano y rebuild)
   if [ ! -f "$O/.fase8-target-cleaned" ]; then
     rm -rf "$O/target"; find "$O/build" -name .stamp_target_installed -delete 2>/dev/null
     touch "$O/.fase8-target-cleaned"; echo "fase8: target limpio (re-finalize forzado)"
   fi
-  # bootstrap: el kernel puede rebuildarse durante rootfs-cpio y necesita que el
-  # cpio EXISTA (primera corrida). Placeholder = overlay-own empaquetado; luego
-  # se sobreescribe con el cpio real y linux-rebuild re-embebe.
+  # bootstrap: el kernel del make default necesita INITRAMFS_SOURCE existente;
+  # placeholder = overlay-own empaquetado; luego el cpio real re-embebe.
   KOWN="$W/artifacts/$BOARD/rootfs-own.cpio"
   mkdir -p "$(dirname "$KOWN")"
   if [ ! -s "$KOWN" ]; then
     ( cd "$R/boards/$BOARD/rootfs-overlay-own" && find . | cpio -o -H newc -R 0:0 2>/dev/null > "$KOWN" )
     echo "fase8: bootstrap placeholder cpio ($(stat -c%s "$KOWN") B)"
   fi
-  make O="$O" BR2_EXTERNAL="$S" rootfs-cpio >> "$LOG" 2>&1 || { echo "ROOTFS-CPIO FAIL — tail:"; tail -15 "$LOG"; exit 1; }
+  # 9-3.1: GOAL DEFAULT — construye TODOS los packages + finalize + imágenes.
+  # 'world'/'rootfs-cpio' NO construyen packages (Makefile:600 world==post-image).
+  # post-image falla benignamente (ADR-008) DESPUÉS de que rootfs.cpio ya está.
+  if ! make O="$O" BR2_EXTERNAL="$S" -j16 >> "$LOG" 2>&1; then
+    if benign_postimage; then
+      echo "make default: post-image benign failure (ADR-008) — packages+images completos, continuando"
+    else
+      echo "BUILD FAIL — tail:"; tail -25 "$LOG"; exit 1
+    fi
+  fi
+  # 9-3.1: el cpio del goal default contiene TODO el target (packages completos)
   cp "$O/images/rootfs.cpio" "$KOWN"
   echo "rootfs-own: $KOWN ($(stat -c%s "$KOWN") bytes)"
-  export KOWN_FRESH=1
-fi
-# Fase 8a: forzar re-link del kernel para embeber el cpio recien generado
-if [ -n "${KOWN_FRESH:-}" ]; then
+  # re-embeber el cpio full en el kernel (re-links vmlinux)
   make O="$O" BR2_EXTERNAL="$S" linux-rebuild >> "$LOG" 2>&1 || { echo "LINUX-REBUILD FAIL — tail:"; tail -15 "$LOG"; exit 1; }
+  # el uImage lo genera la CADENA DE IMAGENES (post-image "Generating vmlinux.uImage"),
+  # NO el linux package — hace falta un make final para regenerarlo desde el
+  # vmlinux re-linkeado (evidencia run-9: uImage stale post-rebuild, 2026-09-22).
+  if ! make O="$O" BR2_EXTERNAL="$S" -j16 >> "$LOG" 2>&1; then
+    if benign_postimage; then
+      echo "make final: post-image benign failure (ADR-008) — uImage+imagenes regenerados, continuando"
+    else
+      echo "BUILD FAIL — tail:"; tail -25 "$LOG"; exit 1
+    fi
+  fi
+else
+  make O="$O" -j16 >> "$LOG" 2>&1 || { echo "BUILD FAIL — tail:"; tail -25 "$LOG"; exit 1; }
 fi
-make O="$O" -j16 >> "$LOG" 2>&1 || { echo "BUILD FAIL — tail:"; tail -25 "$LOG"; exit 1; }
-# nota: 'bootloader.bin not found' en target-post-image = esperado (ADR-008)
 
 echo "=== BUILD OK — artefactos $O/images/ ==="
 ls -la "$O/images/" | head -12
