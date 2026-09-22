@@ -86,6 +86,20 @@ if [ -n "$KVER" ] && [ -d "$OWNPATCH" ]; then
     NP=$((NP+1))
   done
   [ "$NP" -gt 0 ] && echo "own-patches: $NP -> SDK patches/linux-$KVER/ (kernel $KVER, prefijo 900X)"
+  # 9-4: parches PROPIOS version-specific (patches/buildroot/linux-$KVER/) —
+  # prefijo 910X (ordenan tras los 900X genericos). Para ports que SOLO aplican
+  # a esta version de kernel (p.ej. timer API 5.x) y que romperian otras versiones
+  # (el mismo archivo fuente es compartido via SOURCE/linux-drivers rsync).
+  OWNVER="$R/patches/buildroot/linux-$KVER"
+  if [ -d "$OWNVER" ]; then
+    NV=0
+    for pv in "$OWNVER"/*.patch; do
+      [ -f "$pv" ] || continue
+      cp "$pv" "$S/patches/linux-$KVER/910$(basename "$pv" | sed 's/^000//')"
+      NV=$((NV+1))
+    done
+    [ "$NV" -gt 0 ] && echo "own-patches-versioned: $NV -> SDK patches/linux-$KVER/ (prefijo 910X)"
+  fi
   if [ "$KVER" != "4.4.186" ] && [ -d "$S/patches/linux-4.4.186/yaffs2" ] && [ ! -d "$S/patches/linux-$KVER/yaffs2" ]; then
     cp -r "$S/patches/linux-4.4.186/yaffs2" "$S/patches/linux-$KVER/"
     echo "yaffs2: integrado a patches/linux-$KVER/ (inerte: CONFIG_YAFFS off en base config)"

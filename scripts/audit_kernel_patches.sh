@@ -76,20 +76,45 @@ grep -q "_pad_abi_2025\[20\]" "$KB/include/uapi/hcuapi/vidmp.h" 2>/dev/null \
   && ok "own-9003: amprpc debug logging" || bad "own-9003 amprpc sin debug"
 [ "$(grep -c 'SND_XFER_DBG_MAX' "$KB/drivers/hcdrivers/avp-proxy/avp-proxy.c" 2>/dev/null)" -gt 0 ] \
   && ok "own-9004: avp-proxy snd-xfer budget" || bad "own-9004 avp-proxy sin budget"
+# 9-4 versionado (solo 5.12.4): port timer API hc_gpio_key (9101)
+if [ "$KVER" = "5.12.4" ]; then
+  if grep -q 'timer_setup(&bdata->release_timer' "$KB/drivers/hcdrivers/input/gpio/hc_gpio_key.c" 2>/dev/null; then
+    ok "own-9101: hc_gpio_key timer_setup port (5.12) aplicado"
+  else
+    bad "own-9101: hc_gpio_key sin port timer (setup_timer removida en 5.0 — no compila)"
+  fi
+else
+  grep -q 'setup_timer' "$KB/drivers/hcdrivers/input/gpio/hc_gpio_key.c" 2>/dev/null \
+    && ok "hc_gpio_key con setup_timer (API 4.4 — correcto para $KVER)" \
+    || echo "  [INFO] hc_gpio_key: sin setup_timer en $KVER (verificar si el driver esta habilitado)"
+fi
 
 # 5. patch log del proyecto (evidencia primaria si existe) + sets
 echo "-- patch log / sets --"
 NP4=$(find "$P4" -maxdepth 1 -name '*.patch' ! -name '9*' 2>/dev/null | wc -l)
 [ "$NP4" -eq "$NVEND" ] && ok "set SDK linux-$KVER = $NVEND patches vendor" || bad "set SDK vendor = $NP4 (esperado $NVEND)"
-NS9=$(find "$P4" -maxdepth 1 -name '9*.patch' 2>/dev/null | wc -l)
+NS9=$(find "$P4" -maxdepth 1 -name '900*.patch' 2>/dev/null | wc -l)
+NV9=$(find "$P4" -maxdepth 1 -name '910*.patch' 2>/dev/null | wc -l)
 NPOWN=$(find "$OWN" -maxdepth 1 -name '*.patch' 2>/dev/null | wc -l)
-[ "$NPOWN" -eq 4 ] && ok "set repo patches/buildroot/linux = 4 patches" || bad "set repo = $NPOWN (esperado 4)"
+[ "$NPOWN" -eq 4 ] && ok "set repo patches/buildroot/linux = 4 patches (genericos)" || bad "set repo genericos = $NPOWN (esperado 4)"
+OWNVER="$PROJ/patches/buildroot/linux-$KVER"
+NVOWN=$(find "$OWNVER" -maxdepth 1 -name '*.patch' 2>/dev/null | wc -l)
+[ "$NVOWN" -eq 1 ] && ok "set repo patches/buildroot/linux-$KVER = 1 patch (versionado)" || bad "set repo versionado linux-$KVER = $NVOWN (esperado 1)"
 [ "$NS9" -eq 4 ] && ok "SDK sincronizado: 4 patches propios 900X-*.patch en linux-$KVER" \
   || { [ "$NS9" -eq 0 ] && echo "  [INFO] SDK linux-$KVER sin 900X aún (build_kernel.sh no corrido para esta versión; árbol verificado arriba)" \
        || bad "SDK linux-$KVER 900X = $NS9 (esperado 0 o 4)"; }
 if [ "$NS9" -eq 4 ] && [ "$NPOWN" -eq 4 ]; then
-  DH=$(diff <(cat "$OWN"/*.patch | sha256sum) <(cat "$P4"/9*.patch | sha256sum))
+  DH=$(diff <(cat "$OWN"/*.patch | sha256sum) <(cat "$P4"/900*.patch | sha256sum))
   [ -z "$DH" ] && ok "900X en SDK == copias repo (hash idéntico)" || bad "900X en SDK difieren del repo"
+fi
+if [ "$KVER" = "5.12.4" ]; then
+  [ "$NV9" -eq 1 ] && ok "SDK sincronizado: 1 patch versionado 910X en linux-5.12.4" \
+    || { [ "$NV9" -eq 0 ] && echo "  [INFO] SDK linux-5.12.4 sin 910X aún (build_kernel.sh no corrido; árbol verificado abajo)" \
+         || bad "SDK 910X = $NV9 (esperado 0 o 1)"; }
+  if [ "$NV9" -eq 1 ] && [ "$NVOWN" -eq 1 ]; then
+    DV=$(diff <(cat "$OWNVER"/*.patch | sha256sum) <(cat "$P4"/910*.patch | sha256sum))
+    [ -z "$DV" ] && ok "910X en SDK == copias repo (hash idéntico)" || bad "910X en SDK difieren del repo"
+  fi
 fi
 LOG="$HOME/work/r36sx-hclinux/logs/linux-patch-v1.log"
 if [ "$KVER" = "4.4.186" ] && [ -f "$LOG" ]; then
