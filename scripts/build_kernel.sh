@@ -1,21 +1,24 @@
 #!/usr/bin/env bash
-# build_kernel.sh <board> — Fase 4B+: build kernel con board propia del repo.
+# build_kernel.sh <board> [variant] — Fase 4B+: build kernel con board propia del repo.
 # Flujo reproducible: repo (fuente de verdad) -> workspace SDK -> Buildroot.
-# Uso: ./scripts/build_kernel.sh r36sx-v26
-# Fase 9-1: paso 3b — parches kernel PROPIOS (patches/buildroot/linux/) se
-# sincronizan a SDK patches/linux-<version>/ con prefijo 900X (orden posterior
-# al set vendor 00XX; archivos target: SOURCE/linux-drivers, agnósticos de versión).
+# Uso: ./scripts/build_kernel.sh r36sx-v26          (kernel del defconfig base: 4.4.186)
+#      ./scripts/build_kernel.sh r36sx-v26 k512     (defconfig hichip_hc16xx_r36sx_v26_k512: kernel 5.12.4)
+# Fase 9-1 (ADR-014): paso 3b — parches kernel PROPIOS (patches/buildroot/linux/) se
+# sincronizan a SDK patches/linux-<version>/ con prefijo 900X (orden posterior al set
+# vendor 00XX; archivos target: SOURCE/linux-drivers, agnósticos de versión).
 set -euo pipefail
-BOARD="${1:?uso: build_kernel.sh r36sx-v26}"
+BOARD="${1:?uso: build_kernel.sh r36sx-v26 [variant]}"
+VARIANT="${2:-}"
 W="$HOME/work/r36sx-hclinux"
 S="$W/sdk/hclinux-2024.02.y.2/hclinux"
 R="$(cd "$(dirname "$BASH_SOURCE")/.." && pwd)"
-O="$W/build/$BOARD"
-LOG="$W/logs/${BOARD}-build_$(date +%Y%m%d_%H%M%S).log"
+TAG="$BOARD${VARIANT:+-$VARIANT}"
+O="$W/build/$TAG"
+LOG="$W/logs/${TAG}-build_$(date +%Y%m%d_%H%M%S).log"
 
 # 1. validar insumos del repo
 DTS_REPO="$R/boards/$BOARD/dts/$BOARD.dts"
-DEF_REPO="$R/configs/buildroot/hichip_hc16xx_${BOARD//-/_}_defconfig"
+DEF_REPO="$R/configs/buildroot/hichip_hc16xx_${BOARD//-/_}${VARIANT:+_$VARIANT}_defconfig"
 [ -f "$DTS_REPO" ] || { echo "ERROR: falta $DTS_REPO"; exit 1; }
 [ -f "$DEF_REPO" ] || { echo "ERROR: falta $DEF_REPO"; exit 1; }
 [ -d "$S" ] || { echo "ERROR: SDK no extraído — scripts/prepare_sdk.sh"; exit 1; }
@@ -58,7 +61,7 @@ if [ -f "$BL_CFG" ]; then
   fi
 fi
 
-# 3b. Fase 9-1: parches kernel PROPIOS repo -> SDK patches/linux-<version>/
+# 3b. Fase 9-1 (ADR-014): parches kernel PROPIOS repo -> SDK patches/linux-<version>/
 # (prefijo 900X: aplican tras el set vendor 00XX; targets = SOURCE/linux-drivers,
 #  agnósticos de versión de kernel — sirve para 4.4.186 y 5.12.4 por igual)
 KVER=$(sed -n 's/^BR2_LINUX_KERNEL_VERSION="\([^"]*\)"/\1/p' "$DEF_REPO")
@@ -71,6 +74,13 @@ if [ -n "$KVER" ] && [ -d "$OWNPATCH" ]; then
     NP=$((NP+1))
   done
   [ "$NP" -gt 0 ] && echo "own-patches: $NP -> SDK patches/linux-$KVER/ (kernel $KVER, prefijo 900X)"
+  # yaffs2: el hook PRE_PATCH del SDK (LINUX_PATCH_HICHIP_DRIVERS) hace cd patches/linux/yaffs2
+  # INCONDICIONALMENTE — el set 5.12.4 no lo trae. Integración INERTE (YAFFS off en ambos
+  # base configs, verificado 2026-09-22): se copia al dir de versión para que el hook no falle.
+  if [ "$KVER" != "4.4.186" ] && [ -d "$S/patches/linux-4.4.186/yaffs2" ] && [ ! -d "$S/patches/linux-$KVER/yaffs2" ]; then
+    cp -r "$S/patches/linux-4.4.186/yaffs2" "$S/patches/linux-$KVER/"
+    echo "yaffs2: integrado a patches/linux-$KVER/ (inerte: CONFIG_YAFFS off en base config)"
+  fi
 fi
 
 # 4. entorno validado (docs/BUILD.md + TOOLCHAIN_PROVENANCE)

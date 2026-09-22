@@ -26,6 +26,13 @@ CONFIG_BLK_DEV_INITRD=y
 # CONFIG_RD_XZ is not set
 # CONFIG_RD_LZO is not set
 # CONFIG_RD_LZ4 is not set
+# Fase 9-3 (kernel 5.12.4): RD_ZSTD no existe en 4.4 pero es default-y en 5.12
+# (init/Kconfig) y su INITRAMFS_COMPRESSION_ZSTD rompia el build (requiere host zstd:
+# "ZSTD usr/initramfs_inc_data / zstd: not found"). Misma politica 6w: cpio CRUDO.
+# En builds 4.4 estas lineas son inertes (merge_config las salta: simbolo inexistente).
+# CONFIG_RD_ZSTD is not set
+# CONFIG_INITRAMFS_COMPRESSION_ZSTD is not set
+CONFIG_INITRAMFS_COMPRESSION_NONE=y
 # Fase 8a: rootfs 100% PROPIO (Buildroot userland + overlay minimo + hcdaemon de fabrica)
 CONFIG_INITRAMFS_SOURCE="/home/dafunknoise/work/r36sx-hclinux/artifacts/r36sx-v26/rootfs-own.cpio"
 # --- 7c lean-fábrica: extras vs fábrica removidos (evidencia: dmesg diff + fds diag6x) ---
