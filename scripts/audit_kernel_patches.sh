@@ -47,7 +47,13 @@ grep -q '^BR2_GLOBAL_PATCH_DIR="\$(BR2_EXTERNAL_HCLINUX_PATH)/patches"$' "$O/.co
 
 # 3. hunks distintivos en el árbol (presence != applied; aquí: árbol resultante)
 echo "-- hunks/símbolos en árbol --"
-grep -q "platforms += hc16xx" "$KB/arch/mips/Kbuild.platforms" 2>/dev/null && ok "0001: platforms += hc16xx" || bad "0001 no aplicado (Kbuild.platforms)"
+if grep -q "platforms += hc16xx" "$KB/arch/mips/Kbuild.platforms" 2>/dev/null; then
+  ok "0001: platforms += hc16xx (formato 4.4)"
+elif grep -qE 'platform-\$\(CONFIG_HICHIP_HC16XX\)[[:space:]]*\+= hc16xx' "$KB/arch/mips/Kbuild.platforms" 2>/dev/null; then
+  ok "0001: platform-\$(CONFIG_HICHIP_HC16XX) += hc16xx/ (formato 5.12)"
+else
+  bad "0001 no aplicado (Kbuild.platforms sin wiring hc16xx)"
+fi
 grep -q "config HICHIP_HC16XX" "$KB/arch/mips/Kconfig" 2>/dev/null && ok "0001: config HICHIP_HC16XX" || bad "0001 no aplicado (Kconfig)"
 grep -qE "obj-.*hcdrivers" "$KB/drivers/Makefile" 2>/dev/null && ok "0007: obj hcdrivers en Makefile" || bad "0007 no aplicado"
 [ -d "$KB/drivers/hcdrivers" ] && ok "BSP drivers/hcdrivers/ inyectado ($(ls "$KB/drivers/hcdrivers" | wc -l) componentes)" || bad "drivers/hcdrivers ausente"

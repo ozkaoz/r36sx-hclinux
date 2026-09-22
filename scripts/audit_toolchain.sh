@@ -22,13 +22,15 @@ echo "  host arch: $UNAME_M ($(grep PRETTY /etc/os-release | cut -d'"' -f2))"
 echo "-- target (Buildroot .config) --"
 CFG="$O/.config"
 [ -f "$CFG" ] || { bad "no existe $CFG"; echo "TOOLCHAIN PROVENANCE: FAIL"; exit 1; }
-for kv in 'BR2_ARCH="mipsel"' 'BR2_ENDIAN="LITTLE"' 'BR2_TOOLCHAIN_EXTERNAL_PREFIX="mips-mti-linux-gnu"' 'BR2_LINUX_KERNEL_VERSION="4.4.186"'; do
+KVER=$(sed -n 's/^BR2_LINUX_KERNEL_VERSION="\([^"]*\)"/\1/p' "$O/.config" 2>/dev/null)
+KVER="${KVER:-4.4.186}"
+for kv in 'BR2_ARCH="mipsel"' 'BR2_ENDIAN="LITTLE"' 'BR2_TOOLCHAIN_EXTERNAL_PREFIX="mips-mti-linux-gnu"' "BR2_LINUX_KERNEL_VERSION=\"$KVER\""; do
   grep -q "^$kv$" "$CFG" && ok "$kv" || bad "falta $kv"
 done
 
 # 3. cross compiler real (.cmd de kbuild — presence != use)
 echo "-- cross compiler invocado (kbuild .cmd) --"
-KB="$O/build/linux-4.4.186"
+KB="$O/build/linux-$KVER"
 [ -d "$KB" ] || { bad "no existe kernel build dir $KB"; echo "TOOLCHAIN PROVENANCE: FAIL"; exit 1; }
 NCMD=$(find "$KB" -name '*.cmd' -type f 2>/dev/null | wc -l)
 [ "$NCMD" -gt 100 ] && ok "$NCMD .cmd files presentes" || bad "solo $NCMD .cmd files"

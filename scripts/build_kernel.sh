@@ -34,6 +34,10 @@ cp "$DEF_REPO" "$S/configs/$(basename "$DEF_REPO")"
 # fragmento de kernel config (board-specific deltas, p.ej. CONFIG_CHECK_ADC) -> workspace
 KFRAG="$R/boards/$BOARD/kernel/$BOARD.config.fragment"
 [ -f "$KFRAG" ] && cp "$KFRAG" "$BD/kernel/$BOARD.config.fragment"
+# Fase 9-3: fragment de variante (deltas k512-only, p.ej. musb off) — el defconfig
+# de la variante lista AMBOS fragments en BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES.
+KFRAG_V="$R/boards/$BOARD/kernel/$BOARD${VARIANT:+-$VARIANT}.config.fragment"
+[ -f "$KFRAG_V" ] && cp "$KFRAG_V" "$BD/kernel/"
 # rootfs-overlay de la board (p.ej. etc/init.d/S99app para lanzar la UI) -> workspace
 OVERLAY_SRC="$R/boards/$BOARD/rootfs-overlay"
 if [ -d "$OVERLAY_SRC" ]; then
