@@ -1,68 +1,68 @@
-# CURRENT.md — Snapshot operacional (CACHÉ — Git es la verdad)
+# CURRENT.md — Operational Snapshot (CACHE — Git is the truth)
 
-**Actualizado:** 2025-09-21 (PROYECTO FASES 0-8 COMPLETAS Y VERIFICADAS FÍSICAMENTE)
-**Regla:** snapshot pequeño, sin historia. No changelog.
+**Updated:** 2026-09-21 (PROJECT PHASES 0-8 COMPLETE AND PHYSICALLY VERIFIED)
+**Rule:** small snapshot, no history. No changelog.
 
 ## PROJECT
 
-r36sx-hclinux — plataforma Linux/HCLinux reproducible para consolas HiChip (HC16xx/MIPS) con TreeFrogUI. **Objetivo ampliado: ecosistema multi-consola tipo ArkOS/darkOS** (no solo R36SX — también SF3000, SF3500, GB350).
+r36sx-hclinux — reproducible Linux/HClinux platform for HiChip consoles (HC16xx/MIPS) with TreeFrogUI. **Expanded goal: multi-console ArkOS/darkOS-like ecosystem** (not just R36SX — also SF3000, SF3500, GB350).
 
 ## CURRENT PHASE
 
-**FASES 0-8 COMPLETAS.** El proyecto alcanza su estado objetivo:
-- Kernel 100% propio (4.4.186, ABI fix ADR-012)
-- Rootfs 100% propio (Buildroot, 10.8 MiB)
-- TreeFrogUI funcional (audio+video+salida — PHYSICAL PASS)
-- Boot chain mapeado + recovery probado (pin 2/4 + HCProgrammer)
-- cubegm/ = 5 archivos (contrato NOR) + treefrog/ = stack TreeFrogUI (shim)
-- SD limpia (166 MiB basura removida)
-- Repo completo en GitHub, sin outstanding.
+**PHASES 0-8 COMPLETE.** The project reached its target state:
+- Kernel 100% own (4.4.186, ABI fix ADR-012)
+- Rootfs 100% own (Buildroot, 10.8 MiB)
+- TreeFrogUI functional (audio+video+exit — PHYSICAL PASS)
+- Boot chain mapped + recovery proven (pin 2/4 + HCProgrammer)
+- cubegm/ = 5 files (NOR contract) + treefrog/ = TreeFrogUI stack (shim)
+- SD clean (166 MiB factory garbage removed)
+- Full repo on GitHub, nothing outstanding.
 
 ## CURRENT OBJECTIVE
 
-Discusión de dirección: multi-consola, features de ecosistema, o Kernel 5.12.4 (Fase 9 — DIFERIDO).
+Direction discussion: multi-console, ecosystem features, or Kernel 5.12.4 (Phase 9 — DEFERRED).
 
 ## CURRENT HEAD
 
-(ver git log -1 — caché)
+(see git log -1 — cache)
 
 ## KNOWN-GOOD STATE
 
-- NOR = FÁBRICA (bootloader stock, no reemplazable)
-- SD = kernel 8e f8fb6768 + rootfs propio + TreeFrogUI funcional
-- cubegm/ = 5 archivos (NOR contract)
-- treefrog/ = 41 items (stack + drivers multi-consola + apps)
+- NOR = FACTORY (stock bootloader, not replaceable)
+- SD = kernel 8e f8fb6768 + own rootfs + functional TreeFrogUI
+- cubegm/ = 5 files (NOR contract)
+- treefrog/ = 41 items (stack + multi-console drivers + apps)
 - Boot ~8s
-- Kit de recuperación verificado 2 veces
-- Backup completo: sd-full.tar + D:/R36SX/nor-dump-20260919/
+- Recovery kit verified twice
+- Full backup: sd-full.tar + D:/R36SX/nor-dump-20260919/
 
 ## BUILD STATUS
 
-KERNEL+ROOTFS: BUILD PASS (gates TOOLCHAIN/PATCH/DTB PASS).
-BOOTLOADER: NO REEMPLAZABLE (2 intentos, 2 brickeos — usar bootloader de fábrica).
+KERNEL+ROOTFS: BUILD PASS (TOOLCHAIN/PATCH/DTB gates PASS).
+BOOTLOADER: NOT REPLACEABLE (2 attempts, 2 bricks — use factory bootloader).
 
 ## PHYSICAL STATUS
 
-CONSOLA OPERATIVA: NOR fábrica + kernel 8e + rootfs propio + TreeFrogUI funcionando.
+CONSOLE OPERATIONAL: factory NOR + kernel 8e + own rootfs + TreeFrogUI working.
 
 ## SOURCE SDK SHA256
 
-e321b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — SDK HiChip
+e321b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 
 ## ACTIVE BLOCKERS
 
-Ninguno técnico.
+None technical.
 
 ## NEXT EXACT ACTION
 
-Discusión de dirección (multi-consola, ecosistema, o kernel 5.12.4).
+Direction discussion (multi-console, ecosystem, or kernel 5.12.4).
 
-## REFERENCIA RÁPIDA
+## QUICK REFERENCE
 
-| Subsistema | Ver |
-|------------|-----|
-| Contrato TreeFrogUI | docs/TREEFROG_UI_CONTRACT.md |
-| Post-mortem bootloader | docs/experiments/2026-09-20_postmortem-brickeo-bootloader.md |
+| Subsystem | See |
+|-----------|-----|
+| TreeFrogUI contract | docs/TREEFROG_UI_CONTRACT.md |
+| Bootloader post-mortem | docs/experiments/2026-09-20_postmortem-brickeo-bootloader.md |
 | ADR-012 (ABI) / ADR-013 (diag opt-in) | DECISIONS.md |
-| Kit de recuperación NOR | D:/R36SX/hcprogrammer-restore-kit/ |
-| Manual de compilación | docs/MANUAL_COMPILACION.md |
+| NOR recovery kit | D:/R36SX/hcprogrammer-restore-kit/ |
+| Build manual | docs/BUILD_MANUAL.md |
