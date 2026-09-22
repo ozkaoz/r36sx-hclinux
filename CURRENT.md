@@ -60,7 +60,7 @@ None technical.
 
 ## NEXT EXACT ACTION
 
-9-4 deploy: cp build/r36sx-v26-k512/images/vmlinux.uImage -> /mnt/g/cubegm/vmlinux.uImage (after backup of current 8e uImage on SD + sha verify read-back). CLASS F — ask user authorization. Rollback: restore from SD backup file or D:/R36SX/sd-full-backups/2026-09-21_phase8-known-good/. 
+9-4 DEPLOYED (2026-09-22, user-authorized class F): cubegm/vmlinux.uImage = dd7566c4 (kernel 5.12.4); 8e backup = vmlinux.uImage.8e.bak (f8fb6768) on SD; dtb.bin/avp.uImage untouched (1258f1eb/a9788995); diag.enabled flag set. AWAITING PHYSICAL BOOT TEST: user boots console -> observe (menu TreeFrogUI / splash / black / hang) -> SD back to PC -> read boottrace evidence. Milestone-1 PASS = visual menu + clean boottrace. Rollback = cp vmlinux.uImage.8e.bak vmlinux.uImage.
 
 ## QUICK REFERENCE
 
