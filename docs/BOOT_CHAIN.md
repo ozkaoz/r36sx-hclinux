@@ -38,7 +38,7 @@ Estado del deploy físico actual (SD de la consola) — qué es NUESTRO vs qué 
 
 | Componente | Propiedad | Evidencia |
 |---|---|---|
-| **Kernel Linux (vmlinux.uImage)** | **100% NUESTRO** — vanilla 4.4.186 + linux-drivers SDK + 45 parches vendor + parches propios (`patches/kernel/0001..0005`: ABI 2025 auddec/vidmp + debug budgets), compilado con Codescape mips-mti-linux-gnu 6.3.0 | BUILD PASS 9m `1b095ac8`; gates TOOLCHAIN+PATCH PROVENANCE PASS; build logs `~/work/r36sx-hclinux/logs/` |
+| **Kernel Linux (vmlinux.uImage)** | **100% NUESTRO** — vanilla 4.4.186 + linux-drivers SDK + 45 parches vendor + parches propios (canon `patches/buildroot/linux/0001..0004`, sync 900X al SDK — ADR-014: ABI 2025 auddec/vidmp + debug budgets), compilado con Codescape mips-mti-linux-gnu 6.3.0 | BUILD PASS 9m `1b095ac8`; gates TOOLCHAIN+PATCH PROVENANCE PASS; build logs `~/work/r36sx-hclinux/logs/` |
 | **DTB (dtb.bin)** | **NUESTRO** — generado desde `boards/r36sx-v26/dts/` (referencia stock auditada) | `04fb8383…`, DTB SEMANTIC PASS 0-diff vs stock |
 | **Rootfs/initramfs embebido (rootfs-own.cpio)** | **NUESTRO** — Buildroot propio: busybox nuestro + glibc Codescape + overlay propio (rcS/S09trace/S10mdev/S41hcdaemon/S99app). Única pieza propietaria: `hcdaemon` de fábrica (610.404 B, documentada, ADR-008-nota) | `e305dfc2…`; 8a-8c PHYSICAL PASS |
 | **AVP/HCRTOS (avp.uImage)** | **FÁBRICA** — preservado POR DISEÑO (ADR-008; estrategia proxy-side ADR-012, no reemplazo). avp-own construido y archivado como plan C | SD `a9788995…` == `avp.uImage.factory.bak` |

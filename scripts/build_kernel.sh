@@ -2,6 +2,9 @@
 # build_kernel.sh <board> — Fase 4B+: build kernel con board propia del repo.
 # Flujo reproducible: repo (fuente de verdad) -> workspace SDK -> Buildroot.
 # Uso: ./scripts/build_kernel.sh r36sx-v26
+# Fase 9-1: paso 3b — parches kernel PROPIOS (patches/buildroot/linux/) se
+# sincronizan a SDK patches/linux-<version>/ con prefijo 900X (orden posterior
+# al set vendor 00XX; archivos target: SOURCE/linux-drivers, agnósticos de versión).
 set -euo pipefail
 BOARD="${1:?uso: build_kernel.sh r36sx-v26}"
 W="$HOME/work/r36sx-hclinux"
@@ -55,6 +58,21 @@ if [ -f "$BL_CFG" ]; then
   fi
 fi
 
+# 3b. Fase 9-1: parches kernel PROPIOS repo -> SDK patches/linux-<version>/
+# (prefijo 900X: aplican tras el set vendor 00XX; targets = SOURCE/linux-drivers,
+#  agnósticos de versión de kernel — sirve para 4.4.186 y 5.12.4 por igual)
+KVER=$(sed -n 's/^BR2_LINUX_KERNEL_VERSION="\([^"]*\)"/\1/p' "$DEF_REPO")
+OWNPATCH="$R/patches/buildroot/linux"
+if [ -n "$KVER" ] && [ -d "$OWNPATCH" ]; then
+  NP=0
+  for p in "$OWNPATCH"/*.patch; do
+    [ -f "$p" ] || continue
+    cp "$p" "$S/patches/linux-$KVER/900$(basename "$p" | sed 's/^000//')"
+    NP=$((NP+1))
+  done
+  [ "$NP" -gt 0 ] && echo "own-patches: $NP -> SDK patches/linux-$KVER/ (kernel $KVER, prefijo 900X)"
+fi
+
 # 4. entorno validado (docs/BUILD.md + TOOLCHAIN_PROVENANCE)
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export BR2_DL_DIR="$W/cache/dl"
@@ -86,7 +104,7 @@ if grep -q "rootfs-own.cpio" "$KFRAG" 2>/dev/null; then
 fi
 # Fase 8a: forzar re-link del kernel para embeber el cpio recien generado
 if [ -n "${KOWN_FRESH:-}" ]; then
-  make O="$O" linux-rebuild >> "$LOG" 2>&1 || { echo "LINUX-REBUILD FAIL — tail:"; tail -15 "$LOG"; exit 1; }
+  make O="$O" BR2_EXTERNAL="$S" linux-rebuild >> "$LOG" 2>&1 || { echo "LINUX-REBUILD FAIL — tail:"; tail -15 "$LOG"; exit 1; }
 fi
 make O="$O" -j16 >> "$LOG" 2>&1 || { echo "BUILD FAIL — tail:"; tail -25 "$LOG"; exit 1; }
 # nota: 'bootloader.bin not found' en target-post-image = esperado (ADR-008)

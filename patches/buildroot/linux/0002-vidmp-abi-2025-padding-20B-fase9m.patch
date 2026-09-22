@@ -1,0 +1,23 @@
+--- a/include/uapi/hcuapi/vidmp.h
++++ b/include/uapi/hcuapi/vidmp.h
+@@ -192,6 +192,20 @@
+ 	int             buffering_start;
+ 	int             buffering_end;
+ 	jpg_scan_type_e scan_type;
++
++	/*
++	 * 9m FIX: padding 20 bytes para matchear ABI Dic-2025 de
++	 * libffplayer.so/libhudi.so (mismo patron que el fix 9l de auddec.h).
++	 * El SDK Jul-2024 compila sizeof=644 (VIDDEC_INIT=0x82840400); los
++	 * binarios de fabrica Dic-2025 envian sizeof=664 (VIDDEC_INIT=0x82980400)
++	 * — verificado por scan de constantes lui+ori de libffplayer.so y
++	 * libhudi.so ( metodo validado: AUDDEC_INIT 0x82780301 coincide con el
++	 * boottrace on-device del 9l). Sin este padding, el switch case
++	 * VIDDEC_INIT del avp-proxy NO matchea y KSHM_WRITE_HDL_ACCESS nunca se
++	 * envia -> el AVP decodifica (VER:H264/allocsz) pero sin buffers de
++	 * frames -> video sin imagen.
++	 */
++	uint8_t _pad_abi_2025[20];
+ }__attribute__((aligned(4)));
+ 
+ struct vdec_decore_status {

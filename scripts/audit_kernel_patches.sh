@@ -1,17 +1,22 @@
 #!/usr/bin/env bash
 # audit_kernel_patches.sh — PATCH PROVENANCE GATE (AGENTS.md §14)
 # Verifica el patch set REALMENTE aplicado a un kernel build dir del proyecto:
-# 41 patches HiChip en orden + inyección rsync de SOURCE/linux-drivers + yaffs2.
+# 41 patches HiChip en orden + rsync de SOURCE/linux-drivers + yaffs2
+# + 4 patches PROPIOS (Fase 9-1: repo patches/buildroot/linux/ -> SDK 900X-*.patch):
+#   9001 auddec.h ABI pad 24B (ADR-012)   9002 vidmp.h ABI pad 20B (ADR-012)
+#   9003 amprpc debug logging             9004 avp-proxy snd-xfer debug budget
 # Read-only sobre el output y el SDK; idempotente; emite PATCH PROVENANCE: PASS/FAIL.
 # Uso: ./scripts/audit_kernel_patches.sh [kernel-build-dir] [output-dir]
-#   kernel-build-dir default: ~/work/r36sx-hclinux/build/d3100-v20-baseline/build/linux-4.4.186
-#   output-dir default:        ~/work/r36sx-hclinux/build/d3100-v20-baseline
+#   kernel-build-dir default: ~/work/r36sx-hclinux/build/r36sx-v26/build/linux-4.4.186
+#   output-dir default:        ~/work/r36sx-hclinux/build/r36sx-v26
 set -uo pipefail
 
-KB="${1:-$HOME/work/r36sx-hclinux/build/d3100-v20-baseline/build/linux-4.4.186}"
-O="${2:-$HOME/work/r36sx-hclinux/build/d3100-v20-baseline}"
+KB="${1:-$HOME/work/r36sx-hclinux/build/r36sx-v26/build/linux-4.4.186}"
+O="${2:-$HOME/work/r36sx-hclinux/build/r36sx-v26}"
 SDK="$HOME/work/r36sx-hclinux/sdk/hclinux-2024.02.y.2/hclinux"
 P4="$SDK/patches/linux-4.4.186"
+PROJ="$HOME/projects/r36sx-hclinux"
+OWN="$PROJ/patches/buildroot/linux"
 KEXT=/mnt/d/GitHub/KERNEL
 FAIL=0
 bad() { echo "  [FAIL] $1"; FAIL=$((FAIL+1)); }
@@ -22,10 +27,13 @@ echo "=== PATCH PROVENANCE AUDIT — $KB ==="
 # 1. precondiciones
 [ -d "$KB" ] || { echo "  [FAIL] no existe $KB"; echo "PATCH PROVENANCE: FAIL"; exit 1; }
 [ -f "$KB/.stamp_patched" ] && ok ".stamp_patched presente" || bad "sin .stamp_patched"
-[ -f "$O/.config" ] && grep -q '^BR2_GLOBAL_PATCH_DIR="$(BR2_EXTERNAL_HCLINUX_PATH)/patches"$' "$O/.config" \
+[ -f "$O/.config" ] || { echo "  [FAIL] no existe $O/.config"; echo "PATCH PROVENANCE: FAIL"; exit 1; }
+
+# 2. BR2_GLOBAL_PATCH_DIR = SDK/patches (single dir — el buildroot del SDK no soporta colon)
+grep -q '^BR2_GLOBAL_PATCH_DIR="\$(BR2_EXTERNAL_HCLINUX_PATH)/patches"$' "$O/.config" \
   && ok "BR2_GLOBAL_PATCH_DIR = SDK/patches" || bad "BR2_GLOBAL_PATCH_DIR no apunta al SDK"
 
-# 2. hunks distintivos en el árbol (presence != applied; aquí: árbol resultante)
+# 3. hunks distintivos en el árbol (presence != applied; aquí: árbol resultante)
 echo "-- hunks/símbolos en árbol --"
 grep -q "platforms += hc16xx" "$KB/arch/mips/Kbuild.platforms" 2>/dev/null && ok "0001: platforms += hc16xx" || bad "0001 no aplicado (Kbuild.platforms)"
 grep -q "config HICHIP_HC16XX" "$KB/arch/mips/Kconfig" 2>/dev/null && ok "0001: config HICHIP_HC16XX" || bad "0001 no aplicado (Kconfig)"
@@ -35,26 +43,50 @@ grep -qE "obj-.*hcdrivers" "$KB/drivers/Makefile" 2>/dev/null && ok "0007: obj h
 [ -d "$KB/fs/yaffs2" ] && ok "yaffs2 integrado en fs/" || bad "yaffs2 ausente"
 grep -q "yaffs" "$KB/fs/Kconfig" 2>/dev/null && ok "fs/Kconfig referencia yaffs2" || bad "fs/Kconfig sin yaffs"
 
-# 3. patch log del proyecto (evidencia primaria si existe) o recuento del set
-echo "-- patch log / set --"
+# 4. patches PROPIOS en el árbol (estado resultante — vale para aplicación
+#    manual histórica 8e y para la integrada buildroot 9-1)
+echo "-- patches propios (ADR-012 + debug) en árbol --"
+grep -q "_pad_abi_2025\[24\]" "$KB/include/uapi/hcuapi/auddec.h" 2>/dev/null \
+  && ok "own-9001: auddec.h ABI pad 24B (ADR-012)" || bad "own-9001 auddec.h sin pad"
+grep -q "_pad_abi_2025\[20\]" "$KB/include/uapi/hcuapi/vidmp.h" 2>/dev/null \
+  && ok "own-9002: vidmp.h ABI pad 20B (ADR-012)" || bad "own-9002 vidmp.h sin pad"
+[ "$(grep -c 'amprpc_dbg' "$KB/drivers/hcdrivers/amprpc/amprpc.c" 2>/dev/null)" -gt 0 ] \
+  && ok "own-9003: amprpc debug logging" || bad "own-9003 amprpc sin debug"
+[ "$(grep -c 'SND_XFER_DBG_MAX' "$KB/drivers/hcdrivers/avp-proxy/avp-proxy.c" 2>/dev/null)" -gt 0 ] \
+  && ok "own-9004: avp-proxy snd-xfer budget" || bad "own-9004 avp-proxy sin budget"
+
+# 5. patch log del proyecto (evidencia primaria si existe) + sets
+echo "-- patch log / sets --"
 LOG="$HOME/work/r36sx-hclinux/logs/linux-patch-v1.log"
-NP4=$(find "$P4" -maxdepth 1 -name '*.patch' | wc -l)
-[ "$NP4" -eq 41 ] && ok "set SDK linux-4.4.186 = 41 patches" || bad "set SDK = $NP4 (esperado 41)"
+NP4=$(find "$P4" -maxdepth 1 -name '*.patch' ! -name '9*' | wc -l)
+[ "$NP4" -eq 41 ] && ok "set SDK linux-4.4.186 = 41 patches vendor" || bad "set SDK vendor = $NP4 (esperado 41)"
+NS9=$(find "$P4" -maxdepth 1 -name '9*.patch' | wc -l)
+NPOWN=$(find "$OWN" -maxdepth 1 -name '*.patch' 2>/dev/null | wc -l)
+[ "$NPOWN" -eq 4 ] && ok "set repo patches/buildroot/linux = 4 patches" || bad "set repo = $NPOWN (esperado 4)"
+[ "$NS9" -eq 4 ] && ok "SDK sincronizado: 4 patches propios 900X-*.patch" \
+  || { [ "$NS9" -eq 0 ] && echo "  [INFO] SDK sin 900X aún (pre 9-1 o build_kernel.sh no corrido; árbol verificado arriba)" \
+       || bad "SDK 900X = $NS9 (esperado 0 o 4)"; }
+if [ "$NS9" -eq 4 ] && [ "$NPOWN" -eq 4 ]; then
+  DH=$(diff <(cat "$OWN"/*.patch | sha256sum) <(cat "$P4"/9*.patch | sha256sum))
+  [ -z "$DH" ] && ok "900X en SDK == copias repo (hash idéntico)" || bad "900X en SDK difieren del repo"
+fi
 if [ -f "$LOG" ]; then
   NA=$(grep -c "^Applying" "$LOG")
-  [ "$NA" -eq 41 ] && ok "log V=1: 41 'Applying' en orden" || bad "log: $NA Applying (esperado 41)"
+  [ "$NA" -eq 45 ] && ok "log: 45 'Applying' (41 vendor + 4 own — integrado 9-1)" \
+    || { [ "$NA" -eq 41 ] && echo "  [INFO] log histórico 41 'Applying' (pre 9-1; árbol verificado arriba)" \
+         || bad "log: $NA Applying (esperado 41 o 45)"; }
   grep -q "rsync.*SOURCE/linux-drivers" "$LOG" && ok "log: rsync linux-drivers (PRE_PATCH)" || bad "log sin rsync"
   grep -q "patch-ker.sh" "$LOG" && ok "log: yaffs2 patch-ker.sh" || bad "log sin yaffs2"
 else
-  echo "  [INFO] sin $LOG — regenerar con: make O=<audit> V=1 linux-patch (ver docs/PATCH_PROVENANCE.md §4)"
+  echo "  [INFO] sin $LOG — regenerar con: make O=<audit> V=1 linux-patch"
 fi
 
-# 4. relación con copias externas D: (VERIFIED IDENTICAL, sin doble aplicación)
+# 6. relación con copias externas D: (VERIFIED IDENTICAL, sin doble aplicación)
 echo "-- copias externas /mnt/d/GitHub/KERNEL --"
 if [ -d "$KEXT/linux-4.4.186" ]; then
-  D=$(diff <(cd "$P4" && find . -maxdepth 1 -name '*.patch' -exec sha256sum {} \; | sort -k2) \
+  D=$(diff <(cd "$P4" && find . -maxdepth 1 -name '*.patch' ! -name '9*' -exec sha256sum {} \; | sort -k2) \
            <(cd "$KEXT/linux-4.4.186" && find . -maxdepth 1 -name '*.patch' -exec sha256sum {} \; | sort -k2))
-  [ -z "$D" ] && ok "41/41 idénticos a D:\\GitHub\\KERNEL (VERIFIED IDENTICAL — no doble aplicación)" || bad "diff externo vs SDK"
+  [ -z "$D" ] && ok "41 vendor idénticos a D:\\GitHub\\KERNEL (VERIFIED IDENTICAL — no doble aplicación)" || bad "diff externo vs SDK (vendor)"
 else
   echo "  [INFO] $KEXT/linux-4.4.186 no accesible"
 fi

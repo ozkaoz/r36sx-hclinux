@@ -1,0 +1,45 @@
+--- a/drivers/hcdrivers/avp-proxy/avp-proxy.c
++++ b/drivers/hcdrivers/avp-proxy/avp-proxy.c
+@@ -409,6 +409,18 @@
+ 	return ret;
+ }
+ 
++/* 7a: budget para el debug snd_xfer (mismo patron que amprpc_dbg) — tras
++ * SND_XFER_DBG_MAX entradas cero costo: produccion silenciosa, debugging
++ * con las primeras N trazas conservadas. */
++static atomic_t snd_xfer_dbg_count = ATOMIC_INIT(0);
++#define SND_XFER_DBG_MAX 500
++#define snd_xfer_dbg(fmt, ...)						\
++	do { if (atomic_read(&snd_xfer_dbg_count) < SND_XFER_DBG_MAX) { \
++		atomic_inc(&snd_xfer_dbg_count);			\
++		pr_info("snd_xfer[%d]: " fmt,				\
++			atomic_read(&snd_xfer_dbg_count), ##__VA_ARGS__); \
++	} } while (0)
++
+ static long snd_xfer(struct proxy_fpriv *fpriv, unsigned int cmd,
+ 		     unsigned long parg)
+ {
+@@ -425,6 +437,13 @@
+ 		fpriv->priv = kzalloc(sizeof(struct snd_hw_info), GFP_KERNEL);
+ 		avp_ioctl(fpriv->avp_fd, SND_IOCTL_GET_HW_INFO,
+ 			  (unsigned long)fpriv->priv);
++		{
++			struct snd_hw_info *dbg = (struct snd_hw_info *)fpriv->priv;
++			snd_xfer_dbg("hwinfo: dma_addr=0x%08X dma_size=%u "
++				"rd_reg=0x%08X wr_reg=0x%08X\n",
++				dbg->dma_addr, dbg->dma_size,
++				dbg->i2si_rd_idx_register, dbg->i2si_wr_idx_register);
++		}
+ 	}
+ 	dma_info = (struct snd_hw_info *)fpriv->priv;
+ 	size = xfer->frames * dma_info->pcm_params.bitdepth *
+@@ -437,6 +456,9 @@
+ 	rd = ioread16((void *)dma_info->i2si_rd_idx_register) << 4;
+ 	wr = ioread16((void *)dma_info->i2si_wr_idx_register) << 4;
+ 
++	snd_xfer_dbg("xfer: frames=%u bitdepth=%u ch=%u rd=%u wr=%u\n",
++		xfer->frames, dma_info->pcm_params.bitdepth,
++		dma_info->pcm_params.channels, rd, wr);
+ 	if (wr == rd) {
+ 		get_avail_size = 0;
+ 	} else if (wr > rd) {

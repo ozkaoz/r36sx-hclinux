@@ -54,7 +54,7 @@ Los binarios userspace de fábrica (Dic-2025: `libffplayer.so` a1625d51…, `lib
 | `audio_config` | **632** | AUDDEC_INIT `0x82780301` | `_pad_abi_2025[24]` (9l) |
 | `video_config` | **664** | VIDDEC_INIT `0x82980400` | `_pad_abi_2025[20]` (9m) |
 
-Parches: `patches/kernel/0001..0002`. Diagnóstico de futuros drifts: trace amprpc on-device + reconstrucción `lui+ori` de los binarios de fábrica.
+Patches: `patches/buildroot/linux/0001..0002` (canon; synced to SDK as 900X — ADR-014). Diagnóstico de futuros drifts: trace amprpc on-device + reconstrucción `lui+ori` de los binarios de fábrica.
 
 ## 5. Estructura en SD y artefactos (inventario con hashes sha256-16)
 

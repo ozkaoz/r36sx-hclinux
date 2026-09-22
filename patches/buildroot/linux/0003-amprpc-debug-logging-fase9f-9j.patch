@@ -1,0 +1,86 @@
+--- a/drivers/hcdrivers/amprpc/amprpc.c
++++ b/drivers/hcdrivers/amprpc/amprpc.c
+@@ -36,6 +36,50 @@
+ #include "smbox_reg.h"
+ #include "mmbox_reg.h"
+ #include "amprpc.h"
++
++/* 9f: debug logging */
++static atomic_t amprpc_dbg_count = ATOMIC_INIT(0);
++#define AMPRPC_DBG_MAX 2000
++#define amprpc_dbg(fmt, ...) \
++	do { if (atomic_read(&amprpc_dbg_count) < AMPRPC_DBG_MAX) { \
++		atomic_inc(&amprpc_dbg_count); \
++		pr_info("amprpc[%d]: " fmt, atomic_read(&amprpc_dbg_count), ##__VA_ARGS__); \
++	} } while(0)
++
++#define amprpc_dbg_open(fmt, ...) \
++	do { if (atomic_read(&amprpc_dbg_count) < AMPRPC_DBG_MAX && !amprpc_is_spam_open(buf)) { \
++		atomic_inc(&amprpc_dbg_count); \
++		pr_info("amprpc[%d]: " fmt, atomic_read(&amprpc_dbg_count), ##__VA_ARGS__); \
++	} } while(0)
++
++/* 9i/9j: filtro — no logear spam de cubevol */
++static inline int amprpc_is_spam_cmd(unsigned int cmd)
++{
++	switch (cmd) {
++	case 0x4001080C: /* GET_VOLUME */
++	case 0x8001080B: /* SET_VOLUME */
++	case 0x20000822: /* SET_HDMI_MUTE */
++	case 0x40041C02: /* HDMI_TX nr=2 */
++	case 0x20001C04: /* HDMI_TX nr=4 */
++		return 1;
++	}
++	return 0;
++}
++
++/* 9j: filtrar OPEN spam de cubevol (sndC0i2so + backlight en loop) */
++static inline int amprpc_is_spam_open(const char *name)
++{
++	if (!name) return 0;
++	if (strcmp(name, "/dev/sndC0i2so") == 0) return 1;
++	if (strcmp(name, "/dev/backlight") == 0) return 1;
++	return 0;
++}
++
++#define amprpc_dbg_ioctl(fmt, ...) \
++	do { if (atomic_read(&amprpc_dbg_count) < AMPRPC_DBG_MAX && !amprpc_is_spam_cmd(cmd)) { \
++		atomic_inc(&amprpc_dbg_count); \
++		pr_info("amprpc[%d]: " fmt, atomic_read(&amprpc_dbg_count), ##__VA_ARGS__); \
++	} } while(0)
+ #include "wqueue.h"
+ 
+ #define REG32_WRITE_SYNC(_r, _v)                                               \
+@@ -265,9 +309,11 @@
+ 	REG32_WRITE_SYNC(&arg->rpc.status, RPC_STATUS_SETUP);
+ 	msg_other_core((uint32_t)arg);
+ 	if (!wait_event_timeout(msg_wq[i], arg->rpc.dir == RPC_RET_M2S, CONFIG_AMPRPC_TIMEOUT)) {
++		amprpc_dbg_open("OPEN TIMEOUT: %s", buf);
+ 		ret = -1;
+ 	} else {
+ 		ret = arg->ret;
++		amprpc_dbg_open("OPEN %s -> fd=%d", buf, ret);
+ 	}
+ 
+ 	REG32_WRITE_SYNC(&arg->rpc.status, RPC_STATUS_FINISHED);
+@@ -438,6 +484,8 @@
+ 		return -EFAULT;
+ 	}
+ 
++	amprpc_dbg_ioctl("IOCTL fd=%d cmd=0x%08X sz=%d", fd, cmd, sz);
++
+ 	down(&msgres);
+ 
+ 	__lock_bitmap();
+@@ -470,9 +518,11 @@
+ 	}
+ 
+ 	if (!wait_event_timeout(msg_wq[i], arg->rpc.dir == RPC_RET_M2S, CONFIG_AMPRPC_TIMEOUT)) {
++		amprpc_dbg_ioctl("IOCTL TIMEOUT: cmd=0x%08X", cmd);
+ 		ret = -1;
+ 	} else {
+ 		ret = arg->ret;
++		amprpc_dbg_ioctl("IOCTL cmd=0x%08X -> ret=%d", cmd, ret);
+ 		if ((dir & _IOC_READ) && sz > 0) {
+ 			memcpy((void *)args, (void *)arg->parg, sz);
+ 		}

@@ -45,13 +45,20 @@ tar xzf hclinux-2024.02.y.2.tar.gz -C ~/work/r36sx-hclinux/
 
 ### 4.1 Build kernel + rootfs
 ```bash
-./scripts/build_kernel.sh r366sx-v26
+./scripts/build_kernel.sh r36sx-v26
 ```
 
 Generates:
 - vmlinux.uImage (kernel with embedded initramfs)
 - dtb.bin
 - rootfs-own.cpio
+
+### 4.1b Own kernel patches (Phase 9-1 — ADR-014)
+Canonical own patches live in `patches/buildroot/linux/` (unified-diff `a/`/`b/`, apply with `-p1`).
+`build_kernel.sh` step 3b syncs them to `SDK/patches/linux-<KVER>/` with prefix `900X` (000N -> 900N, applied AFTER the vendor 00XX set). KVER is read from the defconfig — works for 4.4.186 and 5.12.4 alike.
+The 4 current patches: 9001 auddec ABI pad 24B (ADR-012), 9002 vidmp ABI pad 20B (ADR-012), 9003 amprpc debug logging, 9004 avp-proxy snd-xfer debug budget (ADR-013).
+They target only SOURCE/linux-drivers files (injected pre-patch via rsync) — version-agnostic, no conflicts with the vendor set (verified both sets).
+Verified E2E: clean scratch `make linux-patch` = 45 Applying; the 4 patched files are bit-identical to the known-good 8e tree.
 
 ### 4.2 Deploy to SD
 ```bash
@@ -109,6 +116,9 @@ rootfs/   = factory runtime libs
 
 ## 10. Roadmap & Phase 9 (5.12.4)
 - Phase 9: upgrade to Linux 5.12.4 as next technical step.
-- Pre-requisite: 4.4.186 must be known-good physically (now it is).
-- Risk: driver ABI break with DTB/AVP. Needs physical validation before flash.
-- Recommendation: start with 5.4 (LTS) before jumping to 5.12.
+- Pre-requisite: 4.4.186 known-good physically (DONE) + reproducible own-patch set (9-1 DONE, ADR-014).
+- SDK evidence: NO 5.4 support exists (patches only for 4.4.186 and 5.12.4) — the earlier "start with 5.4 LTS" recommendation is VOID. Direct 5.12.4 is the only vendor-supported path.
+- Vendor provides kernel-configs/5.12.4/kernel-squashfs.config base config.
+- Our 4 own patches are version-agnostic (linux-drivers targets) — no conflicts with the 5.12.4 SDK patch set (verified).
+- Risks: DTS binding drift 4.4->5.12 (rebase our board DTS on the 5.12.4 arch-patch reference), ioctl ABI revalidation on hardware, musb stack changes.
+- Discipline: one variable per boot. Milestone 1 = serial console boot only. Rollback = restore kernel bundle from D:/R36SX/sd-full-backups/2026-09-21_phase8-known-good/.

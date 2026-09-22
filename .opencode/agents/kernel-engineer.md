@@ -13,7 +13,7 @@ Construir kernel Linux reproducible para R36SX V2.6: baseline 4.4.186 (GOLDEN, A
 ## Reglas
 
 - Todo en WSL (ADR-001); fuentes del SDK verificadas (verify_sources.sh) — el vendor tree es inmutable; se compila en workspace `~/work/`.
-- Patches vendor de `/mnt/d/GitHub/KERNEL/linux-4.4.186/` (41) aplicados como evidencia; cualquier patch propio va en `patches/kernel/` del repo.
+- Patches vendor de `/mnt/d/GitHub/KERNEL/linux-4.4.186/` (41) aplicados como evidencia; cualquier patch propio NUEVO va en `patches/buildroot/linux/` del repo (formato canonico a/ b/, aplicable con -p1; ADR-014) — build_kernel.sh lo sincroniza como 900X al SDK. `patches/kernel/` = archivo historico.
 - Un experimento = una variable (config). Cambios de config documentados.
 - `.config` propios en `configs/kernel/`; artefactos hasheados en `out/` + BUILD_REPORT (docs/ai/BUILD_CONTRACT.md).
 - Resultado inesperado → volver al SDK (AGENTS.md §3); no "arreglar a ciegas".

@@ -9,7 +9,9 @@ r36sx-hclinux — reproducible Linux/HClinux platform for HiChip consoles (HC16x
 
 ## CURRENT PHASE
 
-**PHASES 0-8 COMPLETE.** The project reached its target state:
+**PHASE 9 IN PROGRESS — kernel 5.12.4 (direct; no 5.4: SDK has no 5.4 patch set — evidence).**
+- 9-1 DONE: own-kernel-patch reproducibility (ADR-014: canon patches/buildroot/linux/ -> 900X sync; E2E 45 Applying, bit-identical to 8e)
+- Phases 0-8 complete and stable:
 - Kernel 100% own (4.4.186, ABI fix ADR-012)
 - Rootfs 100% own (Buildroot, 10.8 MiB)
 - TreeFrogUI functional (audio+video+exit — PHYSICAL PASS)
@@ -20,7 +22,7 @@ r36sx-hclinux — reproducible Linux/HClinux platform for HiChip consoles (HC16x
 
 ## CURRENT OBJECTIVE
 
-Direction discussion: multi-console, ecosystem features, or Kernel 5.12.4 (Phase 9 — DEFERRED).
+Kernel 5.12.4 via SDK vendor path (20-patch set + kernel-configs/5.12.4 base). Milestones: 9-2 audit (DTS/CHECK_ADC), 9-3 build, 9-4 serial boot, 9-5 TreeFrogUI + ABI revalidation.
 
 ## CURRENT HEAD
 
@@ -55,7 +57,7 @@ None technical.
 
 ## NEXT EXACT ACTION
 
-Direction discussion (multi-console, ecosystem, or kernel 5.12.4).
+9-2: audit 5.12.4 — DTS bindings in patch 0001 (4.4 vs 5.12), CHECK_ADC symbol existence, rebase make_board_dts.sh on the 5.12.4 reference.
 
 ## QUICK REFERENCE
 
@@ -63,6 +65,6 @@ Direction discussion (multi-console, ecosystem, or kernel 5.12.4).
 |-----------|-----|
 | TreeFrogUI contract | docs/TREEFROG_UI_CONTRACT.md |
 | Bootloader post-mortem | docs/experiments/2026-09-20_postmortem-brickeo-bootloader.md |
-| ADR-012 (ABI) / ADR-013 (diag opt-in) | DECISIONS.md |
+| ADR-012 (ABI) / ADR-013 (diag opt-in) / ADR-014 (own patches 900X) | DECISIONS.md |
 | NOR recovery kit | D:/R36SX/hcprogrammer-restore-kit/ |
 | Build manual | docs/BUILD_MANUAL.md |
