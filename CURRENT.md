@@ -24,12 +24,12 @@ Kernel: fdd1d7cc (todo el gadget built-in + ports 9101-9104 + el fix del orden).
 ## KNOWN-GOOD STATE
 
 - NOR = FACTORY (stock bootloader, not replaceable)
-- SD = kernel 5.12.4 9731d6a5 + own rootfs (embedded cpio 460 entries) + functional TreeFrogUI menu (PHYSICAL)
-- cubegm/ = 4-file NOR boot contract (avp.uImage, dtb.bin 1258f1eb, vmlinux.uImage 5.12.4, xgame-logo.bmp) + diag.enabled (remove after confirmation)
-- Kernel-4 PURGED from SD (user-authorized, all preserved hash-verified in D: backup): .8e.bak, .stock.bak, treefrog/modules/4.4.186-release, rootfs lib+lib32 modules/4.4.186-release. rootfs/ userspace kept (ADR-012 forensic value, not kernel-loadable)
-- Rollback (if needed): restore from D:/R36SX/sd-full-backups/2026-09-21_phase8-known-good/sd-full.tar (contains 8e f8fb6768 + factory 53b3e0b3 hash-verified)
-- Boot ~10s
-- Recovery kit verified twice; full backup: D:/R36SX/sd-full-backups/2026-09-21_phase8-known-good/ + D:/R36SX/nor-dump-20260919/
+- SD = kernel 5.12.4 69f247dc (gadget built-in + f_mtp order fix) + MTP PHYSICAL PASS (verificado 2x: deteccion Windows + transferencia + salida limpia)
+- cubegm/ = 4-file NOR boot contract + diag.enabled (activo para diagnostico)
+- Rollback fisico: USR-MTP: PHYSICAL PASS (Windows detecta + transferencia + salida limpia sin capa azul — confirmado 2026-09-23 en kernel 69f247dc)
+- RNDIS (9-6e): rolled back — dos bugs documentados (Win Codigo 28: descriptores del gadget; pantalla azul: regresion kernel RNDIS built-in) — iteracion dedicada pendiente
+- kmod real + telnetd busybox deployados en rootfs/ (inertes, reutilizables)
+- Backup known-good: D:/R36SX/sd-full-backups/2026-09-23_mtp-knowngood/ (fresco, hash-verified)
 
 ## BUILD STATUS
 
