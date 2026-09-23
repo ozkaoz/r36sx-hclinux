@@ -1,0 +1,139 @@
+# 0004-fiap-fium-5.12-api-port (k512-only, 2026-09-22, Fase 9-6a part 3):
+# Los gadget functions iAP/iUM del vendor hcdrivers (auto-habilitados con el
+# stack gadget) usan APIs era-4.4: access_ok 3-arg (VERIFY_* removidos),
+# usb_assign_descriptors 4-arg -> 5-arg (5.12 agrego ssp=SuperSpeedPlus; NULL
+# para musb HS), alloc_ep_req 3-arg (forma 5.12: 2-arg, len?len:default),
+# idr_is_empty(&ida.idr) (struct ida ya no embebe struct idr; ida_is_empty
+# existe en 5.12, idr.h:325). Mismo fuente compartido: SOLO 5.12.4.
+diff -ruN a/drivers/hcdrivers/usb/gadget/function/f_iap.c b/drivers/hcdrivers/usb/gadget/function/f_iap.c
+--- a/drivers/hcdrivers/usb/gadget/function/f_iap.c	2026-09-22 20:53:44.459222425 -0500
++++ b/drivers/hcdrivers/usb/gadget/function/f_iap.c	2026-09-22 20:53:44.522733278 -0500
+@@ -232,7 +232,7 @@
+     ssize_t status = -ENOMEM;
+     int retry = 0;
+ 
+-    if (!access_ok(VERIFY_READ, buffer, count))
++    if (!access_ok(buffer, count))
+         return -EFAULT;
+ 
+     if(iap->iap_abort) {
+@@ -324,7 +324,7 @@
+     if (!count && !iap)
+         return 0;
+ 
+-    if (!access_ok(VERIFY_WRITE, buffer, count))
++    if (!access_ok(buffer, count))
+         return -EFAULT;
+ 
+     if(iap->iap_abort) {
+@@ -501,7 +501,7 @@
+     hs_iap_sink_desc.bEndpointAddress = fs_iap_sink_desc.bEndpointAddress;
+ 
+ 	status = -ENOMEM;
+-    ret = usb_assign_descriptors(f, fs_iap_descs, hs_iap_descs, NULL);
++    ret = usb_assign_descriptors(f, fs_iap_descs, hs_iap_descs, NULL, NULL);
+     if (ret)
+         goto fail;
+ 
+@@ -583,7 +583,7 @@
+ static inline struct usb_request *iap_alloc_ep_req(struct usb_ep *ep, int len)
+ {
+     struct f_iap    *iap = ep->driver_data;
+-    return alloc_ep_req(ep, len, iap->buflen);
++    return alloc_ep_req(ep, len ? len : iap->buflen);
+ }
+ 
+ 
+@@ -790,7 +790,7 @@
+ 	mutex_lock(&iap_ida_lock);
+ 
+ 	iapg_put_minor(opts->minor);
+-	if (idr_is_empty(&iap_ida.idr))
++	if (ida_is_empty(&iap_ida))
+ 		giap_cleanup();
+ 
+ 	mutex_unlock(&iap_ida_lock);
+@@ -817,7 +817,7 @@
+ 
+ 	mutex_lock(&iap_ida_lock);
+ 
+-	if (idr_is_empty(&iap_ida.idr)) {
++	if (ida_is_empty(&iap_ida)) {
+         status = giap_setup(NULL, IAP_MINORS);
+         if (status)  {
+             ret = ERR_PTR(status);
+@@ -830,7 +830,7 @@
+ 	if (iap_opts->minor < 0) {
+ 		ret = ERR_PTR(iap_opts->minor);
+ 		kfree(iap_opts);
+-		if (idr_is_empty(&iap_ida.idr))
++		if (ida_is_empty(&iap_ida))
+ 			giap_cleanup();
+ 		goto unlock;
+ 	}
+diff -ruN a/drivers/hcdrivers/usb/gadget/function/f_ium.c b/drivers/hcdrivers/usb/gadget/function/f_ium.c
+--- a/drivers/hcdrivers/usb/gadget/function/f_ium.c	2026-09-22 20:53:44.483239905 -0500
++++ b/drivers/hcdrivers/usb/gadget/function/f_ium.c	2026-09-22 20:53:44.523730687 -0500
+@@ -230,7 +230,7 @@
+     struct f_ium *ium = file->private_data;
+     ssize_t status = -ENOMEM;
+ 
+-    if (!access_ok(VERIFY_READ, buffer, count))
++    if (!access_ok(buffer, count))
+         return -EFAULT;
+ 
+     if(ium->ium_abort) {
+@@ -315,7 +315,7 @@
+     if (!count && !ium)
+         return 0;
+ 
+-    if (!access_ok(VERIFY_WRITE, buffer, count))
++    if (!access_ok(buffer, count))
+         return -EFAULT;
+ 
+     if(ium->ium_abort) {
+@@ -492,7 +492,7 @@
+     hs_ium_sink_desc.bEndpointAddress = fs_ium_sink_desc.bEndpointAddress;
+ 
+ 	status = -ENOMEM;
+-    ret = usb_assign_descriptors(f, fs_ium_descs, hs_ium_descs, NULL);
++    ret = usb_assign_descriptors(f, fs_ium_descs, hs_ium_descs, NULL, NULL);
+     if (ret)
+         goto fail;
+ 
+@@ -572,7 +572,7 @@
+ static inline struct usb_request *ium_alloc_ep_req(struct usb_ep *ep, int len)
+ {
+     struct f_ium    *ium = ep->driver_data;
+-    return alloc_ep_req(ep, len, ium->buflen);
++    return alloc_ep_req(ep, len ? len : ium->buflen);
+ }
+ 
+ 
+@@ -782,7 +782,7 @@
+ 	mutex_lock(&ium_ida_lock);
+ 
+ 	iumg_put_minor(opts->minor);
+-	if (idr_is_empty(&ium_ida.idr))
++	if (ida_is_empty(&ium_ida))
+ 		gium_cleanup();
+ 
+ 	mutex_unlock(&ium_ida_lock);
+@@ -811,7 +811,7 @@
+     pr_debug(" ==> usb gadget : alloc ium funtions instance\n");
+ 
+     mutex_lock(&ium_ida_lock);
+-    if (idr_is_empty(&ium_ida.idr)) {
++    if (ida_is_empty(&ium_ida)) {
+         status = gium_setup(NULL, IUM_MINORS);
+         if (status)  {
+             ret = ERR_PTR(status);
+@@ -824,7 +824,7 @@
+ 	if (ium_opts->minor < 0) {
+ 		ret = ERR_PTR(ium_opts->minor);
+ 		kfree(ium_opts);
+-		if (idr_is_empty(&ium_ida.idr))
++		if (ida_is_empty(&ium_ida))
+ 			gium_cleanup();
+ 		goto unlock;
+ 	}

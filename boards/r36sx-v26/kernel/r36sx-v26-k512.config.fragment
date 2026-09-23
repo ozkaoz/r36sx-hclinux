@@ -2,13 +2,27 @@
 # Se aplica ENCIMA de r36sx-v26.config.fragment (base compartida con 4.4.186):
 # BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES del defconfig k512 lista AMBOS archivos.
 #
-# 9-6a (2026-09-22): MUSB ACTIVADO tras el port 9102 (hcusb.c timeval->ktime,
-# patches/buildroot/linux-5.12.4/0002-musb-timeval-ktime-port.patch). Set = vendor
-# base 5.12.4: HC_MUSB (glue hcdrivers) + USB_MUSB_HDRC (core, parcheado por vendor
-# 0008) + USB_MUSB_HOST (modo host: almacenamiento USB). Gadget (RNDIS/ADB) = 9-6e/f.
+# 9-6a (2026-09-22): MUSB + GADGET. Port 9102 (timeval->ktime) + port 9103 (MTP/PTP/
+# AOA/audio_source desde el patch vendor 0024 que solo existia en el set 4.4).
+# DUAL_ROLE (no HOST): el usb_mode.sh del stack escribe 'peripheral' al sysfs
+# mode del musb para USB Mode (MTP) — con HOST-only el write crasheaba la consola
+# (reinicio fisico, test 9-6a-t1). El musb 5.12 mainline ya tiene mode_show/store
+# (musb_core.c:1894) — solo requiere DUAL_ROLE=y. Set gadget = 4.4 known-good:
+# GADGET + LIBCOMPOSITE=m + CONFIGFS=m. USB_F_MTP/F_PTP=m DIRECTOS (tristates
+# hidden del 9103): el load_mtp_stack del usb_mode.sh exige los modulos VISIBLES
+# en /proc/modules — los wrappers bool USB_CONFIGFS_F_* forzarian =y via select
+# y el script los daria por "unavailable". MASS_STORAGE=m = modo 'run' del stack
+# (en 4.4 venia de un .ko out-of-tree en modules/; en 5.12 lo tenemos in-tree).
 CONFIG_HC_MUSB=y
 CONFIG_USB_MUSB_HDRC=y
-CONFIG_USB_MUSB_HOST=y
+CONFIG_USB_MUSB_DUAL_ROLE=y
+CONFIG_USB_GADGET=y
+CONFIG_USB_LIBCOMPOSITE=m
+CONFIG_USB_CONFIGFS=m
+CONFIG_USB_CONFIGFS_UEVENT=y
+CONFIG_USB_CONFIGFS_MASS_STORAGE=m
+CONFIG_USB_F_MTP=m
+CONFIG_USB_F_PTP=m
 
 # MMC/SD (9-4 post-physical-evidence fix, 2026-09-22): el base vendor 5.12.4 NO trae
 # MMC (sus productos no usan SD) -> /dev/mmcblk0p1 jamas aparece -> S99app se cuelga

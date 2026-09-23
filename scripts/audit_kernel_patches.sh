@@ -88,6 +88,16 @@ if [ "$KVER" = "5.12.4" ]; then
   else
     bad "own-9102: hcusb.c sin port ktime (do_gettimeofday removida en 5.0)"
   fi
+  if [ -f "$KB/drivers/usb/gadget/function/f_mtp.c" ] && grep -q 'mtp_alloc' "$KB/drivers/usb/gadget/function/f_mtp.c" 2>/dev/null; then
+    ok "own-9103: f_mtp/f_ptp/AOA/audio_source porteados (vendor 0024 -> 5.12)"
+  else
+    bad "own-9103: f_mtp ausente (port vendor 0024 no aplicado)"
+  fi
+  if grep -q 'ida_is_empty' "$KB/drivers/hcdrivers/usb/gadget/function/f_iap.c" 2>/dev/null; then
+    ok "own-9104: f_iap/f_ium API-5.12 port aplicado"
+  else
+    bad "own-9104: f_iap sin port API (access_ok/ida/alloc_ep_req era-4.4)"
+  fi
 else
   grep -q 'setup_timer' "$KB/drivers/hcdrivers/input/gpio/hc_gpio_key.c" 2>/dev/null \
     && ok "hc_gpio_key con setup_timer (API 4.4 — correcto para $KVER)" \
@@ -105,7 +115,7 @@ NPOWN=$(find "$OWN" -maxdepth 1 -name '*.patch' 2>/dev/null | wc -l)
 OWNVER="$PROJ/patches/buildroot/linux-$KVER"
 NVOWN=$(find "$OWNVER" -maxdepth 1 -name '*.patch' 2>/dev/null | wc -l)
 NVEXP=1
-[ "$KVER" = "5.12.4" ] && NVEXP=2
+[ "$KVER" = "5.12.4" ] && NVEXP=4
 [ "$NVOWN" -eq "$NVEXP" ] && ok "set repo patches/buildroot/linux-$KVER = $NVOWN patch (versionado, esperado $NVEXP)" || bad "set repo versionado linux-$KVER = $NVOWN (esperado $NVEXP)"
 [ "$NS9" -eq 4 ] && ok "SDK sincronizado: 4 patches propios 900X-*.patch en linux-$KVER" \
   || { [ "$NS9" -eq 0 ] && echo "  [INFO] SDK linux-$KVER sin 900X aún (build_kernel.sh no corrido para esta versión; árbol verificado arriba)" \
