@@ -9,24 +9,9 @@ r36sx-hclinux — reproducible Linux/HClinux platform for HiChip consoles (HC16x
 
 ## CURRENT PHASE
 
-**PHASE 9-4 COMPLETE: CLEAN PHYSICAL PASS (2026-09-22). Kernel 5.12.4 = NEW KNOWN-GOOD.**
-Full criteria met on kernel-5-only SD (kernel-4 purged): TreeFrogUI menu + AUDIO OK (ADR-012 ABI pads validated on 5.12.4 — AUDDEC path physical pass) + input/navigation OK (9101 timer port + HC_INPUT family) + emulator entry/exit OK. Boot ~10s.
-- User-verified visual: menu reached + BUTTON NAVIGATION OK (input drivers + 9101 timer port work), boot ~10s (≈ 4.4 known-good 8s)
-- Test history: t1 (first deploy, no MMC in vendor base): logo-frozen (S99app wait_for_media_ready infinite loop, zero SD writes). t2 (MMC+HC families+port 9101): black screen — display takes LONGER to init on 5.12; user powered off early; boottrace proved FULL boot (SD mounted, amprpc flowing, UI blit#1). t3 (same kernel, waited): MENU OK.
-- Persistentmem/hdmi/panel virtuart lines = cosmetic constants (identical in 4.4-working 9m trace evidence-9m-recovery-boottrace.log)
-- S09trace capture truncation at ~6.4s on successful boots = instrumentation artifact (zhijack mount-storm shadows the loop's binaries) — system unaffected
-- 9-1 DONE: own-kernel-patch reproducibility (ADR-014: canon patches/buildroot/linux/ -> 900X sync)
-- 9-2 DONE: 5.12.4 audit — DTS standalone factory-derived (DTB byte-identical 4.4/5.12, SHA b9b800c8); no 5.4 in SDK (direct 5.12.4 only)
-- 9-3 DONE (FINAL, build dd7566c4 12:08): kernel 5.12.4 BUILD PASS — uImage dd7566c4 (6.37MiB gzip, entry 0x804a0d74), embed DETERMINISTA (build_kernel.sh v6: goal default != world — SDK Makefile:600 world==target-post-image, packages solo bajo goal default; uImage lo regenera la CADENA DE IMAGENES no el linux package; flujo: default make -> cp full cpio -> linux-rebuild -> final make). Cpio embebido: 460 entries, per-config, SIN S07norflash (REMOVIDO del overlay — D-2c muerto, riesgo brick). Delta vs 8e-embed: solo lib/modules (versión) + remoción de LEGACY (hcfota/libhudi/liblvgl/S23kmod/sysctl/udhcpd = acumulados era initramfs-fábrica, NO config-driven; BR2_PACKAGE_HCFOTA=no en AMBAS configs). Milestone-1 serial boot no depende de ninguno de los removidos. libhudi para TreeFrogUI = question 9-5 (SD stack la provee). musb OFF k512-fragment (port=9-6). Gates TOOLCHAIN+PATCH PASS
-- DTB lineage finding: build DTB (b9b800c8) != SD-proven DTB (1258f1eb) since D-2b factory-derived DTS — pre-existing, NOT a 5.12 regression; milestone-1 keeps SD dtb.bin (ONE variable per boot); reconciliation = 9-6
-- Phases 0-8 complete and stable:
-- Kernel 100% own (4.4.186, ABI fix ADR-012)
-- Rootfs 100% own (Buildroot, 10.8 MiB)
-- TreeFrogUI functional (audio+video+exit — PHYSICAL PASS)
-- Boot chain mapped + recovery proven (pin 2/4 + HCProgrammer)
-- cubegm/ = 5 files (NOR contract) + treefrog/ = TreeFrogUI stack (shim)
-- SD clean (166 MiB factory garbage removed)
-- Full repo on GitHub, nothing outstanding.
+**9-6b COMPLETE: USB MODE MTP PHYSICAL PASS (2026-09-23). Windows detecta TreeFrogUI MTP + transferencia de archivos VERIFICADA FISICAMENTE por el usuario.**
+La saga completa (14 test fisicos): HOST-only crash -> DUAL_ROLE | configfs sin mountpoint -> S90configfs | /lib sombreado por el bind del rootfs de fabrica -> modulos visibles | busybox+kmod segfault -> kmod standalone | **module loader del kernel OOPSEA en resolve_symbol con cualquier .ko -> gadget stack BUILT-INTO** | check built-in -> usb_gadget | **EL BUG RAIZ FINAL: f_mtp Android-4.4 llamaba usb_os_desc_prepare_interf_dir ANTES de config_group_init_type_name (inocuo con la array-API de 4.4, FATAL con la list-API de 5.12: list_add sobre grupo zerado -> NULL deref en el mkdir del gadget = el reinicio del kernel)** -> orden corregido en el 9103.
+Kernel: fdd1d7cc (todo el gadget built-in + ports 9101-9104 + el fix del orden). Stack: usb_mode.sh parchado (check usb_gadget; backup .prebuiltin.bak).
 
 ## CURRENT OBJECTIVE
 
@@ -67,9 +52,9 @@ None technical.
 
 ## NEXT EXACT ACTION
 
-**9-6b fix v4 APLICADO (2026-09-23): GADGET STACK BUILT-INTO — pendiente test fisico.**
-ROOT CAUSE FINAL (v5/v6 instrumentation): el module loader de NUESTRO kernel 5.12 OOPSEA en resolve_symbol (module.c:1411, Call Trace decodificado via System.map: resolve_symbol_wait<-move_module) con CUALQUIER modulo (stripped y unstripped, tiny ptp 3.4KB incluido) — el "Segmentation fault" del loader = el kernel matando el proceso tras el OOPS; el mutex del loader queda lockeado = el freeze. La lectura vfat = PERFECTA (md5 exacto), kmod-28 = perfecto (verificado bajo qemu-user con sysroot y con libs de fabrica), el strip = inocente. Workaround: TODO el stack gadget BUILT-INTO el kernel (USB_CONFIGFS=y -> select chain -> LIBCOMPOSITE=y + F_MTP=y + F_PTP=y + F_MASS_STORAGE=y) — CERO carga de modulos en runtime.
-DEPLOY (SD-side): uImage a5b14f65 (6.86MB) + .kos y metadata ELIMINADOS de la SD (rootfs/lib/modules/5.12.4-release borrado, treefrog/modules limpio — el loader roto no debe encontrar nada) + usb_mode.sh parchado (load_mtp_stack check: /sys/module/usb_f_mtp acepta built-in; backup .prebuiltin.bak) + usb_mtp.sh version limpia con invoke-log.
-FLUJO ESPERADO: boot (S90configfs monta configfs; libcomposite built-in registra usb_gadget al mount) -> USB Mode -> usb_mode.sh: modprobe falla limpio (not found, tolerado) -> [ -d usb_gadget ] PASE -> [ -d /sys/module/usb_f_mtp ] PASE -> role switch -> gadget configfs (f_mtp built-in: tipo mtp disponible) -> UDC bind -> mtp-server -> **MTP EN EL PC**.
-KERNEL BUG PENDIENTE (9-6c): el module loader OOPS — investigar la causa raiz kernel-side (posibles: R4K dma-cache patch incompleto para el module region, MIPS module alloc 5.12). El workaround built-in lo esquivara mientras tanto.
-Rollbacks: usb_mode.sh.prebuiltin.bak + backups D: + kernel f13733a9 (rollback artifact WSL).
+Prioridades 9-6 restantes (decidir con el usuario):
+1. **9-6e RNDIS** (AHORA TRIVIAL: el gadget configfs funciona — f_rndis = funcion mainline + network config; ~1 build + test)
+2. **9-6f ADB** (functionfs + adbd — mas trabajo userspace)
+3. **9-6c kernel module loader** (el OOPS de resolve_symbol con .kos — pendiente tecnico; bloquea Wi-Fi 9-6d salvo que se haga built-in tambien)
+4. 9-6b2 DTB reconciliation + 9-6c2 display latency (pulido)
+Notas tecnicas heredadas: CONFIG_MODULE_UNLOAD=n del vendor base (rmmod no disponible); el flujo usb_mode.sh del stack espera modulos visibles (los built-ins pasan via el check usb_gadget parchado — divergence documentada vs upstream).
