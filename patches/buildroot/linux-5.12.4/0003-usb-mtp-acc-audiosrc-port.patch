@@ -8,7 +8,7 @@
 #
 --- /dev/null	2026-09-22 19:45:04.660935659 -0500
 +++ b/drivers/usb/gadget/function/f_mtp.c	2026-09-14 21:30:39.866950226 -0500
-@@ -0,0 +1,1570 @@
+@@ -0,0 +1,1572 @@
 +/*
 + * Gadget Function Driver for MTP
 + *
@@ -800,7 +800,7 @@
 +					__cpu_to_le32(dev->xfer_transaction_id);
 +		}
 +
-+		ret = vfs_read(filp, req->buf + hdr_size, xfer - hdr_size,
++		ret = kernel_read(filp, req->buf + hdr_size, xfer - hdr_size,
 +								&offset);
 +		if (ret < 0) {
 +			r = ret;
@@ -884,9 +884,9 @@
 +
 +		if (write_req) {
 +			DBG(cdev, "rx %p %d\n", write_req, write_req->actual);
-+			ret = vfs_write(filp, write_req->buf, write_req->actual,
++			ret = kernel_write(filp, write_req->buf, write_req->actual,
 +				&offset);
-+			DBG(cdev, "vfs_write %d\n", ret);
++			DBG(cdev, "kernel_write %d\n", ret);
 +			if (ret != write_req->actual) {
 +				r = -EIO;
 +				dev->state = STATE_ERROR;
@@ -1028,8 +1028,8 @@
 +		}
 +
 +		/* We do the file transfer on a work queue so it will run
-+		 * in kernel context, which is necessary for vfs_read and
-+		 * vfs_write to use our buffers in the kernel address space.
++		 * in kernel context (kernel_read/kernel_write operan sobre buffers
++		 * en el kernel address space — vfs_read/vfs_write ya no son exportadas).
 +		 */
 +		queue_work(dev->wq, work);
 +		/* wait for operation to complete */
@@ -1471,7 +1471,9 @@
 +	fi_mtp = to_fi_mtp(fi);
 +	kfree(fi_mtp->name);
 +	mtp_cleanup();
-+	kfree(fi_mtp->mtp_os_desc.group.default_groups);
++	/* 9103 port: 5.12 usb_os_desc_prepare_interf_dir usa la list-API de
++	 * configfs_add_default_group — el caller no libera nada (4.4 kfree del
++	 * array default_groups removido; el campo ya no existe en 5.12). */
 +	kfree(fi_mtp);
 +}
 +
@@ -4441,10 +4443,10 @@
  
 +
 +config USB_F_MTP
-+	tristate
++	tristate "USB MTP function"
 +
 +config USB_F_PTP
-+	tristate
++	tristate "USB PTP function"
 +
 +config USB_F_AUDIO_SRC
 +	tristate
