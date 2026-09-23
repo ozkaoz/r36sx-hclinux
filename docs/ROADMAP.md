@@ -26,7 +26,8 @@ Llevar el kernel 5.12.4 a su punto de desarrollo máximo antes de cualquier migr
 
 | Sub | Ítem | Alcance técnico | Estado |
 |---|---|---|---|
-| **9-6a** | **Port MUSB/USB** | hcusb.c: struct timeval/do_gettimeofday (removidas 5.0) → ktime API; activar HC_MUSB+USB_MUSB_HDRC; verificar gadget/host | ⏳ EN CURSO |
+| **9-6a** | **Port MUSB/USB** | hcusb.c timeval→ktime (port 9102) + DUAL_ROLE + stack gadget completo (ports 9103/9104: f_mtp/f_ptp/AOA/audio_source + f_iap/f_ium API-5.12) + S90configfs + kmod. **USB HOST: PHYSICAL PASS** (stick OK) | ✅ DONE (host) |
+| **9-6b** | **USB Mode (MTP gadget)** | Fix en progreso: 3 tests fisicos; causa raiz ARQUITECTURAL hallada (stack bind-mounts sombrean el initramfs — ver CURRENT.md NEXT). Fix SD-side pendiente | ⏳ EN CURSO |
 | **9-6b** | Reconciliación DTB | build DTB (b9b800c8, nodos uart@1/pinmux del D-2b factory-derived) vs SD-proven 1258f1eb — validar físicamente o reconciliar | PENDIENTE |
 | **9-6c** | Latencia de display | t2: display init lento en 5.12 (posible timeout AVP-side HDMI PHY); boot 4.4=8s vs 5.12~10s+; investigar y pulir | PENDIENTE |
 | **9-6d** | Wi-Fi | drivers en-tree 5.12 (rtlwifi/rtl8xxxu ya compilados como módulos) + módulos vendor (ssv6x5x?); levantar wlan en hardware (si la consola tiene antena/USB dongle) | PENDIENTE |
