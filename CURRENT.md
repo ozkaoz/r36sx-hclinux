@@ -67,22 +67,12 @@ None technical.
 
 ## NEXT EXACT ACTION
 
-**9-6b (USB Mode MTP) — SIGUIENTE SESION: fix SD-side puro (SIN rebuild de kernel).**
-HALLAZGO ARQUITECTURAL FINAL (test 3): el stack TreeFrogUI bind-mountea SUS PROPIOS dirs sobre el sistema en runtime (treefrog/lib->/lib, /usr, /bin, /sbin, /etc — la consola se convierte en "el mundo del stack"). TODO lo del initramfs queda sombreado: por eso kmod compilo (cpio verificado) pero el runtime uso el busybox modprobe del stack ("can't change directory" = mensaje busybox), y por eso /modules/5.12.4-release en raiz SD fue inutil (el bind source de /lib NO es la raiz SD — es treefrog/lib; treefrog/lib/modules NO existe).
-FIX (proxima sesion, ~10 min, SOLO archivos SD):
-1. cp -r el contenido de /modules/5.12.4-release (41 archivos: kos + metadata depmod) -> treefrog/lib/modules/5.12.4-release/ (el bind source real)
-2. Copiar los binarios kmod (sbin/modprobe, insmod, kmod) del initramfs build (build/r36sx-v26-k512/target/sbin/) -> treefrog/sbin/ (el bind source de /sbin) — verificado: BR2_PACKAGE_KMOD=y compilo (63 refs en build log; el segfault era busybox insmod del STACK, no del initramfs)
-3. Alternativa a (2): copiar kmod a treefrog/bin/ y el usb_mode.sh los encuentra via PATH — revisar cual PATH usa el stack
-4. Re-test: boot -> USB Mode -> log.txt con el trace paso a paso
-Rollback kernel: artifacts/r36sx-v26/rollback-k512-4f97279f-musbhost.bak. Kernel actual SD: f13733a9 (#4, S90configfs+kmod embed — correcto pero sombreado).
-
-## ESTADO 9-6a/9-6b DETALLADO (evidencia completa)
-
-- **9-6a USB HOST: PHYSICAL PASS** (stick reconocido con logo; test fisico 2026-09-22)
-- **9-6b USB Mode (MTP gadget): EN PROGRESO — 3 tests fisicos, mismo sintoma (congela, PC no ve dispositivo)**
-  - t1 (kernel HOST-only 4f97279f): REINICIO (crash al escribir peripheral al musb mode con HOST-only) -> fix DUAL_ROLE (fue correcto: t2/t3 ya no reinicia)
-  - t2 (c68c86c0): congela; USB_MODE_ERROR.log: "configfs/libcomposite unavailable" x3 -> fix S90configfs (patron vendor S90usb_device)
-  - t3 (0ad34406): congela igual; log.txt trace revela: modprobe "can't change directory to 5.12.4-release" + INSMOD usb_f_mass_storage.ko SEGFAULT (busybox insmod del STACK tumba el ELF MIPS32rel2 con debug_info; sha del .ko intacto)
-  - t4 (f13733a9 con kmod real): IDENTICO — y el mensaje "can't change directory" (estilo busybox) prueba que el runtime usa los binarios del STACK sombreados, NO los del initramfs
-  - Causa raiz UNICA (arquitectural): los bind-mounts del stack sombrean /lib /usr /bin /sbin /etc — todos los fixes al initramso son invisibles en runtime; los modulos/binaries deben vivir en los bind-sources (treefrog/)
-  - EVIDENCIA CLAVE: /mnt/g/log.txt (trace usb_mode.sh paso a paso), USB_MODE_ERROR.log, la era-4.4 funcionaba porque el initramfs de FABRICA (con su propio rootfs completo) fue la base original y jamas se retesteo USB Mode tras el switch a rootfs propio (Fase 8a)
+**9-6b fix v2 APLICADO (2026-09-23, SD-side puro — pendiente test fisico).**
+Correccion del handoff: el bind-source NO es treefrog/ (carece de bin/sbin/etc) sino la SD **rootfs/** (el rootfs de FABRICA: bin 75, sbin 59, lib 24, etc 20 items — el busybox de fabrica sirve modprobe/insmod al runtime). Ademas: kmod NO instalo en el build target (sbin/modprobe = symlink busybox — investigar en proxima iteracion si se requiere).
+FIX APLICADO (sin rebuild):
+1. rootfs/lib/modules/5.12.4-release/ = 41 archivos (kos + metadata depmod) — via el bind = /lib/modules en runtime -> modprobe del busybox de fabrica resuelve
+2. TODOS los .ko STRIPPED (--strip-debug con el mips strip del toolchain: el debug_info del ELF era el sospechoso del segfault del busybox insmod de fabrica; symtab/modinfo conservados — los 4.4 de fabrica tambien eran stripped y cargaban)
+3. treefrog/modules/5.12.4-release/ (MODULE_DIR del stack, el camino insmod) = mismas versiones stripped
+TEST: boot -> USB Mode -> conectar PC. El flow esperado: modprobe libcomposite (metadata via bind) -> configfs usb_gadget -> modprobe usb_f_mtp (stripped) -> role switch -> gadget -> MTP visible en PC.
+Si persiste el segfault del busybox de fabrica sobre el .ko stripped: siguiente = construir kmod REAL (investigar por que BR2_PACKAGE_KMOD=y no instalo en target) o kmod static, y copiarlo a rootfs/sbin.
+Kernel SD: f13733a9 (S90configfs + kmod-embed, sombreado pero inofensivo). Rollbacks: D: backups + artifacts.
