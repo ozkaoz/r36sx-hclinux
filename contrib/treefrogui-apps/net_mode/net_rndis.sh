@@ -60,7 +60,7 @@ printf 'rndis\n' > "$G/configs/c.1/strings/0x409/configuration"
 printf '250\n' > "$G/configs/c.1/MaxPower" 2>/dev/null
 
 mkdir "$G/functions/rndis.usb0" 2>>"$LOG" || log "rndis.usb0 ya existia"
-ln -s "$G/functions/rndis.usb0" "$G/configs.c.1/rndis.usb0" 2>>"$LOG" || { log "FAIL link"; exit 1; }
+ln -s "$G/functions/rndis.usb0" "$G/configs/c.1/rndis.usb0" 2>>"$LOG" || { log "FAIL link"; exit 1; }
 
 # MS OS Descriptors — EL fix del COM7: el compatible ID "RNDIS" hace que Windows
 # cargue netrndis.inf/usb8023 (adaptador de red) con prioridad sobre el serial.
