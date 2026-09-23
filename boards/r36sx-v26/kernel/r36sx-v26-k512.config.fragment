@@ -22,11 +22,14 @@ CONFIG_USB_CONFIGFS=y
 CONFIG_USB_CONFIGFS_UEVENT=y
 CONFIG_USB_CONFIGFS_MASS_STORAGE=y
 CONFIG_USB_F_MTP=y
-# 9-6e (2026-09-23): RNDIS USB networking — el gadget configfs ya funciona (MTP
-# PHYSICAL PASS); f_rndis = funcion mainline. USB_CONFIGFS_RNDIS bool -> select
-# USB_F_RNDIS -> built-in (patron mass_storage). El usb_mode.sh creara gadgets
-# multifuncion: rndis.usb0 + mtp.usb0 en el mismo gadget.
-CONFIG_USB_CONFIGFS_RNDIS=y
+# 9-6e RNDIS: REVERTIDO 2026-09-23 — el kernel con RNDIS built-in causaba
+# pantalla azul en la consola (regresion fisica: blue overlay a los ~30s del
+# boot, incluso SIN USB mode; persistia tras exit MTP como capa azul navegable).
+# El gadget rndis conecto a nivel kernel (usb0 up + gadget connet en dmesg)
+# pero el display se corrompe. Causa raiz pendiente (sospechas: interaccion
+# del stack net/rndis con GE/AVP, o el vendor hcusb gadget-connect path).
+# El debug = iteracion dedicada. El estado MTP-good (fdd1d7cc) NO debe romperse.
+# CONFIG_USB_CONFIGFS_RNDIS is not set
 CONFIG_USB_F_PTP=y
 
 # MMC/SD (9-4 post-physical-evidence fix, 2026-09-22): el base vendor 5.12.4 NO trae
