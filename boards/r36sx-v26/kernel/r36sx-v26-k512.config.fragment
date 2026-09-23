@@ -22,13 +22,13 @@ CONFIG_USB_CONFIGFS=y
 CONFIG_USB_CONFIGFS_UEVENT=y
 CONFIG_USB_CONFIGFS_MASS_STORAGE=y
 CONFIG_USB_F_MTP=y
-# 9-6e v2 (2026-09-23): RNDIS built-in de vuelta — CAUSA RAIZ DE LA PANTALLA AZUL
-# IDENTIFICADA: el gadget MULTIFUNCION MTP+RNDIS necesitaba 5 endpoints
-# (MTP 2 bulk + RNDIS 2 bulk + 1 interrupt) > los 4 EPs del musb -> corruption
-# al conectar. El built-in solo REGISTRA la funcion al boot (inerte sin gadget).
-# v2: RNDIS como MODO ALTERNATIVO puro (3 EPs, cabe) via flag rndis.mode en la
-# SD raiz -> usb_mtp.sh dispatcher -> usb_rndis.sh (gadget CDC clasico 0x02/0x02/0xFF
-# + VID/PID 0525:a4a2 -> Windows auto-instala usb8023). MTP queda intacto sin flag.
+# 9-6e v6 (2026-09-23): CDC-NCM en vez de RNDIS. Windows 10/11 DEPRECO el driver
+# RNDIS (usb8023) — por eso seguia matcheando CDC-ACM serial (COM7) aun con MS OS
+# Descriptors. CDC-NCM (class 02/0D/00) = soporte NATIVO en Windows 7+ sin drivers
+# especiales. f_ncm.c ya existe en el tree. RNDIS queda como fallback (no usado).
+# NOTA: el interrupt EP del gadget = el sospechoso de la pantalla azul — NCM
+# tambien lo usa para notificaciones; si el azul persiste con NCM = debug kernel.
+CONFIG_USB_CONFIGFS_NCM=y
 CONFIG_USB_CONFIGFS_RNDIS=y
 CONFIG_USB_F_PTP=y
 
