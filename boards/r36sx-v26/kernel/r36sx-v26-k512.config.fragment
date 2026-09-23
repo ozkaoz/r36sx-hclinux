@@ -22,6 +22,11 @@ CONFIG_USB_CONFIGFS=y
 CONFIG_USB_CONFIGFS_UEVENT=y
 CONFIG_USB_CONFIGFS_MASS_STORAGE=y
 CONFIG_USB_F_MTP=y
+# 9-6e (2026-09-23): RNDIS USB networking — el gadget configfs ya funciona (MTP
+# PHYSICAL PASS); f_rndis = funcion mainline. USB_CONFIGFS_RNDIS bool -> select
+# USB_F_RNDIS -> built-in (patron mass_storage). El usb_mode.sh creara gadgets
+# multifuncion: rndis.usb0 + mtp.usb0 en el mismo gadget.
+CONFIG_USB_CONFIGFS_RNDIS=y
 CONFIG_USB_F_PTP=y
 
 # MMC/SD (9-4 post-physical-evidence fix, 2026-09-22): el base vendor 5.12.4 NO trae
