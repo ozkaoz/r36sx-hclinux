@@ -67,11 +67,9 @@ None technical.
 
 ## NEXT EXACT ACTION
 
-**9-6b fix v3 APLICADO (2026-09-23): kmod REAL en el runtime — pendiente test fisico.**
-Diagnostico cerrado (USB_MODE_INVOKE.log + log.txt del test 6): el script SÍ corre (2 invocaciones capturadas; el core muestra ready->initiated y lanza usb_mtp.sh), el estado previo es PERFECTO (UDCs registrados, configfs montado por S90configfs, /lib/modules/5.12.4-release visible via bind, role=b_idle) — pero `modprobe libcomposite` -> **Segmentation fault del busybox de FABRICA** (el bind /sbin = rootfs/sbin del rootfs de fabrica; su busybox no puede cargar modulos 5.12 ni stripped; el shell muere colgado ahi = el freeze con B muerto).
-FIX v3 (todo SD-side, sin rebuild):
-1. kmod-28 compilado STANDALONE con la toolchain Codescape (el buildroot del SDK compila kmod con --disable-tools hardcoded — la opcion BR2_PACKAGE_KMOD_TOOLS no existe en esta version) -> ~/work/kmod-tools-build/tools/kmod (173KB stripped, GLIBC<=2.17, interpreter /lib/ld.so.1 = el de fabrica)
-2. rootfs/sbin/: kmod+modprobe+insmod+depmod+rmmod = el binary multicall (vfat sin symlinks: copias reales; backups .factory.bak del busybox)
-3. rootfs/lib/libz.so.1 (101KB, del sysroot Codescape — la unica NEEDED que faltaba; el binary NO necesita libkmod.so)
-TEST: boot -> USB Mode (A) -> el flujo esperado: kmod modprobe carga libcomposite -> usb_gadget en configfs -> usb_f_mtp -> role switch -> gadget -> **MTP visible en el PC**.
-Kernel SD: f13733a9 (sin cambios). Rollbacks: .factory.bak en rootfs/sbin + backups D:.
+**9-6b fix v4 APLICADO (2026-09-23): GADGET STACK BUILT-INTO — pendiente test fisico.**
+ROOT CAUSE FINAL (v5/v6 instrumentation): el module loader de NUESTRO kernel 5.12 OOPSEA en resolve_symbol (module.c:1411, Call Trace decodificado via System.map: resolve_symbol_wait<-move_module) con CUALQUIER modulo (stripped y unstripped, tiny ptp 3.4KB incluido) — el "Segmentation fault" del loader = el kernel matando el proceso tras el OOPS; el mutex del loader queda lockeado = el freeze. La lectura vfat = PERFECTA (md5 exacto), kmod-28 = perfecto (verificado bajo qemu-user con sysroot y con libs de fabrica), el strip = inocente. Workaround: TODO el stack gadget BUILT-INTO el kernel (USB_CONFIGFS=y -> select chain -> LIBCOMPOSITE=y + F_MTP=y + F_PTP=y + F_MASS_STORAGE=y) — CERO carga de modulos en runtime.
+DEPLOY (SD-side): uImage a5b14f65 (6.86MB) + .kos y metadata ELIMINADOS de la SD (rootfs/lib/modules/5.12.4-release borrado, treefrog/modules limpio — el loader roto no debe encontrar nada) + usb_mode.sh parchado (load_mtp_stack check: /sys/module/usb_f_mtp acepta built-in; backup .prebuiltin.bak) + usb_mtp.sh version limpia con invoke-log.
+FLUJO ESPERADO: boot (S90configfs monta configfs; libcomposite built-in registra usb_gadget al mount) -> USB Mode -> usb_mode.sh: modprobe falla limpio (not found, tolerado) -> [ -d usb_gadget ] PASE -> [ -d /sys/module/usb_f_mtp ] PASE -> role switch -> gadget configfs (f_mtp built-in: tipo mtp disponible) -> UDC bind -> mtp-server -> **MTP EN EL PC**.
+KERNEL BUG PENDIENTE (9-6c): el module loader OOPS — investigar la causa raiz kernel-side (posibles: R4K dma-cache patch incompleto para el module region, MIPS module alloc 5.12). El workaround built-in lo esquivara mientras tanto.
+Rollbacks: usb_mode.sh.prebuiltin.bak + backups D: + kernel f13733a9 (rollback artifact WSL).
