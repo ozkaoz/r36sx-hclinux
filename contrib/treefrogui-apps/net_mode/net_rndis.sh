@@ -44,11 +44,12 @@ mount -t configfs none /sys/kernel/config 2>/dev/null || true
 [ -d "$G" ] && { log "stale gadget — limpiando"; restore 2>/dev/null; }
 mkdir "$G" 2>>"$LOG" || { log "FAIL mkdir gadget"; exit 1; }
 
-# Clase CDC-RNDIS clasica: f_rndis setea interface 0x02/0x02/0xFF solo;
-# el device-level 0x02/0x02/0xFF + 0525:a4a2 = el combo Linux reconocido por Windows.
+# Clase CDC a nivel DISPOSITIVO (0x02/0x00/0x00 = g_rndis clasico). El MATCH
+# real lo hace la INTERFAZ de f_rndis (0x02/0x02/0xFF) con usb8023.sys. (v2:
+# 0x02/0x02/0xFF a nivel dispositivo = Windows lo tomo como modem CDC-ACM -> COM7!)
 printf '0x02\n' > "$G/bDeviceClass"
-printf '0x02\n' > "$G/bDeviceSubClass"
-printf '0xff\n' > "$G/bDeviceProtocol"
+printf '0x00\n' > "$G/bDeviceSubClass"
+printf '0x00\n' > "$G/bDeviceProtocol"
 printf '0x0525\n' > "$G/idVendor"
 printf '0xa4a2\n' > "$G/idProduct"
 printf '0x0200\n' > "$G/bcdUSB"
