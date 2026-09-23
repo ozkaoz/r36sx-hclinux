@@ -1,0 +1,11 @@
+#!/bin/sh
+# S90configfs (Fase 9-6b, 2026-09-22) — mountpoint + configfs para el stack USB Mode.
+# Evidencia: USB_MODE_ERROR.log "configfs/libcomposite unavailable" x3 (test 9-6a-t2):
+# el usb_mode.sh hace mount -t configfs /sys/kernel/config (|| true) pero el MOUNTPOINT
+# no existe en el initramfs buildroot puro (en la era 4.4 venia del initramfs de
+# fabrica; el vendor lo resuelve asi: board/hichip/hc16xx/c3100_emmc/.../S90usb_device).
+# Sin configfs montado, modprobe libcomposite registra el subsystem pero /sys/kernel/
+# config/usb_gadget no aparece -> load_gadget_stack falla -> USB Mode congela.
+mkdir -p /sys/kernel/config
+mount none /sys/kernel/config -t configfs 2>/dev/null || true
+[ -d /sys/kernel/config ] && echo "S90configfs: configfs ready"
