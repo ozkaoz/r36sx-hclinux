@@ -152,3 +152,38 @@ Ningún kernel BUILD PASS es apto para desarrollo posterior sin evidencia CONSER
 Herramientas del gate (parte del gate C futuro): `scripts/audit_toolchain.sh` → `TOOLCHAIN PROVENANCE: PASS/FAIL` · `scripts/audit_kernel_patches.sh` → `PATCH PROVENANCE: PASS/FAIL`.
 
 Regla de patches externos: un patch de `/mnt/d/GitHub/KERNEL` idéntico por SHA256 a uno del SDK que Buildroot ya aplica = `EXTERNAL COPY: VERIFIED IDENTICAL · DOUBLE APPLICATION: NOT REQUIRED` (uso correcto). Un patch externo NO presente en el SDK NO se aplica automáticamente — requiere análisis de versión destino/dependencia/orden/finalidad y decisión documentada.
+
+## 15. STACK-UPSTREAM: desarrollo conjunto con el fork TreeFrogUI (PERMANENTE)
+
+La SD de la consola integra DOS repositorios con ownership separada:
+
+| Repositorio | Remote | Ownership |
+|---|---|---|
+| **Este (r36sx-hclinux)** | ozkaoz/r36sx-hclinux | La PLATAFORMA: kernel, DTS, rootfs, drivers, overlays, contratos de sistema (configfs, gadget ABI, bind layout) |
+| **Fork TreeFrogUI** | ozkaoz/TreeFrogUI (upstream: tzubertowski/TreeFrogUI) | El STACK de userspace de la SD: zhijack.sh, usb_mode.sh, apps/, launcher, la integración con FrogUI |
+
+### Ubicación del fork
+`D:\GitHub\TreeFrogUI` (WSL: `/mnt/d/GitHub/TreeFrogUI`). Consultar también su propio AGENTS.md/README antes de trabajar ahí.
+
+### Regla de propiedad (obligatoria)
+Cualquier desarrollo que toque archivos del stack en la SD (los `treefrog/*` al desplegarse) se desarrolla y canoniza en el FORK TreeFrogUI — NO como parche ad-hoc permanente en la SD ni como código duplicado en este repo. Este repo provee:
+- los contratos de plataforma (S90configfs, gadget built-in, DTB, kernel ABI, rootfs),
+- el estado físico documentado (CURRENT.md),
+- los handoffs hacia el fork (`contrib/treefrogui-apps/` — paquetes upstreamable: se BORRAN de aquí tras integrarse en el fork).
+
+### Protocolo de trabajo conjunto
+1. Al tocar el stack: verificar el estado del fork primero (`git status` en `/mnt/d/GitHub/TreeFrogUI`).
+2. Desarrollar en el fork (branch propia por feature; ej. `net-mode-app`).
+3. Desplegar desde el fork a la SD (deploy script del fork o el helper del handoff).
+4. Validar físicamente en la consola.
+5. Documentar el estado resultante AQUÍ (CURRENT.md + CHANGELOG) — este repo es el journal físico de la plataforma completa.
+
+### Inventario de divergencias stack actuales (a canonizar en el fork)
+1. `usb_mode.sh`: check built-in `grep ... || [ -d "$CONFIG_ROOT/usb_gadget" ]` (9-6b — necesario con gadget functions built-in).
+2. `usb_mtp.sh`: shim dispatcher → `net_mode.sh` con flag `rndis.mode` en la raíz SD (9-6e v2).
+3. `rootfs/sbin/telnetd`: busybox multicall deployado desde la plataforma (el runtime /sbin viene del bind de `rootfs/`).
+4. `treefrog/modules/5.12.4-release/`: ELIMINADO (gadget built-in — el loader de modulos del kernel esta ROTO: OOPS resolve_symbol; ver 9-6c).
+
+### Apps en desarrollo conjunto (handoff → fork)
+- **`apps/net_mode/`** (Conexión de Red): RNDIS USB networking implementado; WiFi placeholder pendiente (requiere 9-6c module loader o wifi built-in). Estructura upstreamable en `contrib/treefrogui-apps/net_mode/`.
+- Futuro: la UI FrogUI gana una entrada "NETWORK" que llama `net_mode.sh` directo (mismo wiring que USB MODE → usb_mtp.sh); `usb_mtp.sh` vuelve entonces al upstream verbatim.

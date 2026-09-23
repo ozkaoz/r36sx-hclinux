@@ -52,9 +52,9 @@ None technical.
 
 ## NEXT EXACT ACTION
 
-Prioridades 9-6 restantes (decidir con el usuario):
-1. **9-6e RNDIS** (AHORA TRIVIAL: el gadget configfs funciona — f_rndis = funcion mainline + network config; ~1 build + test)
-2. **9-6f ADB** (functionfs + adbd — mas trabajo userspace)
-3. **9-6c kernel module loader** (el OOPS de resolve_symbol con .kos — pendiente tecnico; bloquea Wi-Fi 9-6d salvo que se haga built-in tambien)
-4. 9-6b2 DTB reconciliation + 9-6c2 display latency (pulido)
-Notas tecnicas heredadas: CONFIG_MODULE_UNLOAD=n del vendor base (rmmod no disponible); el flujo usb_mode.sh del stack espera modulos visibles (los built-ins pasan via el check usb_gadget parchado — divergence documentada vs upstream).
+**9-6e v2 DESPLEGADO (2026-09-23, pendiente test fisico): kernel 1f5b047a (RNDIS built-in) + app net_mode.**
+- CAUSA RAIZ de la pantalla azul identificada: el gadget MULTIFUNCION MTP+RNDIS necesitaba 5 EPs > los 4 del musb -> corrupcion al conectar. v2: RNDIS PURO (3 EPs, cabe) como MODO ALTERNATIVO via flag.
+- La app: contrib/treefrogui-apps/net_mode/ (upstreamable al fork TreeFrogUI — ver AGENTS.md §15 NUEVO): net_mode.sh (dispatcher) + net_rndis.sh (gadget CDC clasico 0x02/0x02/0xFF + 0525:a4a2 -> Windows auto-driver; usb0 192.168.137.2 + telnetd) + net_wifi.sh (placeholder) + deploy helper. En la SD: treefrog/{net_mode.sh,net_rndis.sh,net_wifi.sh} + usb_mtp.sh shim.
+- El flag: `rndis.mode` en la RAIZ de la SD activa el modo red (sin flag = MTP known-good verbatim — cero riesgo de regresion al MTP).
+- TEST: (1) boot normal SIN flag -> MTP como siempre (regresion cero); (2) crear rndis.mode (via MTP desde el PC) -> reboot -> USB Mode -> RNDIS: Windows instala adaptador -> PC 192.168.137.1 -> telnet 192.168.137.2 = shell remoto.
+- AGENTS.md §15: protocolo de desarrollo conjunto con el fork TreeFrogUI (D:/GitHub/TreeFrogUI) — ownership separada + handoffs contrib/ + inventario de divergencias stack.
