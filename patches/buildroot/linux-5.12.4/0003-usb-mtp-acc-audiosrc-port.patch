@@ -1,6 +1,11 @@
 # 0003-usb-mtp-ptp-acc-audiosrc (k512-only, 2026-09-22, Fase 9-6a part 2):
 # Port del patch vendor 0024 (SOLO existia en el set 4.4.186) a Linux 5.12.
 # Fuentes = archivos aplicados del tree 4.4 (build/r36sx-v26) — ya usan ktime.
+# FIX 5.12 (OOPS decodificado 2026-09-23, Comm: mkdir, BadVA 0x0, epc __list_add):
+# alloc_inst_mtp_ptp llamaba usb_os_desc_prepare_interf_dir ANTES de
+# config_group_init_type_name — inocuo en 4.4 (API default_groups de array) pero
+# FATAL en 5.12: configfs_add_default_group (list-API) hace list_add sobre el grupo
+# SIN inicializar (list head zerado) -> NULL deref al crear el gadget. Orden corregido.
 # Fuentes Android (Google) 2014-2015: f_mtp, f_ptp (wrapper), f_accessory (AOA),
 # f_audio_source. El usb_mode.sh del stack requiere los modulos VISIBLES en
 # /proc/modules: el fragment setea USB_F_MTP=m / USB_F_PTP=m directos (los
@@ -1490,6 +1495,9 @@
 +	fi_mtp->func_inst.set_inst_name = mtp_set_inst_name;
 +	fi_mtp->func_inst.free_func_inst = mtp_free_inst;
 +
++	config_group_init_type_name(&fi_mtp->func_inst.group,
++					"", &mtp_func_type);
++
 +	fi_mtp->mtp_os_desc.ext_compat_id = fi_mtp->mtp_ext_compat_id;
 +	INIT_LIST_HEAD(&fi_mtp->mtp_os_desc.ext_prop);
 +	descs[0] = &fi_mtp->mtp_os_desc;
@@ -1506,9 +1514,6 @@
 +		}
 +	} else
 +		fi_mtp->dev = _mtp_dev;
-+
-+	config_group_init_type_name(&fi_mtp->func_inst.group,
-+					"", &mtp_func_type);
 +
 +	return  &fi_mtp->func_inst;
 +}
