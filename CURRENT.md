@@ -67,12 +67,11 @@ None technical.
 
 ## NEXT EXACT ACTION
 
-**9-6b fix v2 APLICADO (2026-09-23, SD-side puro — pendiente test fisico).**
-Correccion del handoff: el bind-source NO es treefrog/ (carece de bin/sbin/etc) sino la SD **rootfs/** (el rootfs de FABRICA: bin 75, sbin 59, lib 24, etc 20 items — el busybox de fabrica sirve modprobe/insmod al runtime). Ademas: kmod NO instalo en el build target (sbin/modprobe = symlink busybox — investigar en proxima iteracion si se requiere).
-FIX APLICADO (sin rebuild):
-1. rootfs/lib/modules/5.12.4-release/ = 41 archivos (kos + metadata depmod) — via el bind = /lib/modules en runtime -> modprobe del busybox de fabrica resuelve
-2. TODOS los .ko STRIPPED (--strip-debug con el mips strip del toolchain: el debug_info del ELF era el sospechoso del segfault del busybox insmod de fabrica; symtab/modinfo conservados — los 4.4 de fabrica tambien eran stripped y cargaban)
-3. treefrog/modules/5.12.4-release/ (MODULE_DIR del stack, el camino insmod) = mismas versiones stripped
-TEST: boot -> USB Mode -> conectar PC. El flow esperado: modprobe libcomposite (metadata via bind) -> configfs usb_gadget -> modprobe usb_f_mtp (stripped) -> role switch -> gadget -> MTP visible en PC.
-Si persiste el segfault del busybox de fabrica sobre el .ko stripped: siguiente = construir kmod REAL (investigar por que BR2_PACKAGE_KMOD=y no instalo en target) o kmod static, y copiarlo a rootfs/sbin.
-Kernel SD: f13733a9 (S90configfs + kmod-embed, sombreado pero inofensivo). Rollbacks: D: backups + artifacts.
+**9-6b fix v3 APLICADO (2026-09-23): kmod REAL en el runtime — pendiente test fisico.**
+Diagnostico cerrado (USB_MODE_INVOKE.log + log.txt del test 6): el script SÍ corre (2 invocaciones capturadas; el core muestra ready->initiated y lanza usb_mtp.sh), el estado previo es PERFECTO (UDCs registrados, configfs montado por S90configfs, /lib/modules/5.12.4-release visible via bind, role=b_idle) — pero `modprobe libcomposite` -> **Segmentation fault del busybox de FABRICA** (el bind /sbin = rootfs/sbin del rootfs de fabrica; su busybox no puede cargar modulos 5.12 ni stripped; el shell muere colgado ahi = el freeze con B muerto).
+FIX v3 (todo SD-side, sin rebuild):
+1. kmod-28 compilado STANDALONE con la toolchain Codescape (el buildroot del SDK compila kmod con --disable-tools hardcoded — la opcion BR2_PACKAGE_KMOD_TOOLS no existe en esta version) -> ~/work/kmod-tools-build/tools/kmod (173KB stripped, GLIBC<=2.17, interpreter /lib/ld.so.1 = el de fabrica)
+2. rootfs/sbin/: kmod+modprobe+insmod+depmod+rmmod = el binary multicall (vfat sin symlinks: copias reales; backups .factory.bak del busybox)
+3. rootfs/lib/libz.so.1 (101KB, del sysroot Codescape — la unica NEEDED que faltaba; el binary NO necesita libkmod.so)
+TEST: boot -> USB Mode (A) -> el flujo esperado: kmod modprobe carga libcomposite -> usb_gadget en configfs -> usb_f_mtp -> role switch -> gadget -> **MTP visible en el PC**.
+Kernel SD: f13733a9 (sin cambios). Rollbacks: .factory.bak en rootfs/sbin + backups D:.
