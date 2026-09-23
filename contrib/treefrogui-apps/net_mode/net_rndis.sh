@@ -60,7 +60,25 @@ printf 'rndis\n' > "$G/configs/c.1/strings/0x409/configuration"
 printf '250\n' > "$G/configs/c.1/MaxPower" 2>/dev/null
 
 mkdir "$G/functions/rndis.usb0" 2>>"$LOG" || log "rndis.usb0 ya existia"
-ln -s "$G/functions/rndis.usb0" "$G/configs/c.1/rndis.usb0" 2>>"$LOG" || { log "FAIL link"; exit 1; }
+ln -s "$G/functions/rndis.usb0" "$G/configs.c.1/rndis.usb0" 2>>"$LOG" || { log "FAIL link"; exit 1; }
+
+# MS OS Descriptors — EL fix del COM7: el compatible ID "RNDIS" hace que Windows
+# cargue netrndis.inf/usb8023 (adaptador de red) con prioridad sobre el serial.
+# El f_rndis registra su os_desc interface como "rndis" (minuscula, ver f_rndis.c:946).
+if [ -d "$G/functions/rndis.usb0/os_desc/interface.rndis" ]; then
+    printf 'RNDIS\n' > "$G/functions/rndis.usb0/os_desc/interface.rndis/compatible_id" 2>>"$LOG"
+    log "os_desc fn: RNDIS compatible_id OK"
+elif [ -d "$G/functions/rndis.usb0/os_desc/interface.RNDIS" ]; then
+    printf 'RNDIS\n' > "$G/functions/rndis.usb0/os_desc/interface.RNDIS/compatible_id" 2>>"$LOG"
+    log "os_desc fn: RNDIS compatible_id OK (mayuscula)"
+else
+    log "AVISO: no os_desc interface.rndis en la funcion — compatible ID no seteado"
+fi
+mkdir -p "$G/os_desc" 2>>"$LOG" || true
+printf '1\n' > "$G/os_desc/b_vendor_code"
+printf 'MSFT100\n' > "$G/os_desc/qw_sign"
+ln -s "$G/configs/c.1" "$G/os_desc/c.1" 2>>"$LOG" || { log "FAIL os_desc link"; }
+printf '1\n' > "$G/os_desc/use" && log "os_desc gadget: use=1 (MSFT100)" || log "FAIL os_desc use"
 log "gadget creado"
 
 # role switch (patron probado del stack)
