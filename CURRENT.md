@@ -52,9 +52,25 @@ None technical.
 
 ## NEXT EXACT ACTION
 
-**9-6e v2 DESPLEGADO (2026-09-23, pendiente test fisico): kernel 1f5b047a (RNDIS built-in) + app net_mode.**
-- CAUSA RAIZ de la pantalla azul identificada: el gadget MULTIFUNCION MTP+RNDIS necesitaba 5 EPs > los 4 del musb -> corrupcion al conectar. v2: RNDIS PURO (3 EPs, cabe) como MODO ALTERNATIVO via flag.
-- La app: contrib/treefrogui-apps/net_mode/ (upstreamable al fork TreeFrogUI — ver AGENTS.md §15 NUEVO): net_mode.sh (dispatcher) + net_rndis.sh (gadget CDC clasico 0x02/0x02/0xFF + 0525:a4a2 -> Windows auto-driver; usb0 192.168.137.2 + telnetd) + net_wifi.sh (placeholder) + deploy helper. En la SD: treefrog/{net_mode.sh,net_rndis.sh,net_wifi.sh} + usb_mtp.sh shim.
-- El flag: `rndis.mode` en la RAIZ de la SD activa el modo red (sin flag = MTP known-good verbatim — cero riesgo de regresion al MTP).
-- TEST: (1) boot normal SIN flag -> MTP como siempre (regresion cero); (2) crear rndis.mode (via MTP desde el PC) -> reboot -> USB Mode -> RNDIS: Windows instala adaptador -> PC 192.168.137.1 -> telnet 192.168.137.2 = shell remoto.
-- AGENTS.md §15: protocolo de desarrollo conjunto con el fork TreeFrogUI (D:/GitHub/TreeFrogUI) — ownership separada + handoffs contrib/ + inventario de divergencias stack.
+**9-6e v7 estado: NCM DETECTADO COMO RED POR WINDOWS + KERNEL VIVO CON SHELL REMOTO A UN PASO.**
+
+LOGROS DEL ULTIMO TEST:
+- NCM funciona: Windows detecta la consola como DISPOSITIVO DE RED (no COM7) — el driver matching de CDC-NCM es nativo Windows 7+
+- El kernel VIVO: telnet conecto a 192.168.137.2 — el sistema Linux funciona por debajo de la pantalla azul (el display corrupto es cosmetic)
+- Login falla con "bad salt": el /etc de fabrica rootfs/ estaba VACIO — FIX APLICADO: passwd/shadow copiados (root sin contrasena)
+
+LA PANTALLA AZUL (causa confirmada):
+- Es DISPLAY-ONLY: el kernel, red, USB y telnetd funcionan debajo
+- Ocurre cuando un gadget USB con interrupt EP esta activo (RNDIS y NCM ambos lo usan, MTP no)
+- La causa raiz: el vendor musb gadget no maneja interrupt EPs correctamente -> DMA corrupte el framebuffer/display
+- El fix kernel-side (hcusbhsdma.c / hcusb.c) = la siguiente iteracion de debugging
+
+PROXIMO TEST (con la SD ya fixeada):
+1. SD a la consola -> enciende -> USB Mode -> A -> conecta cable
+2. Windows: adaptador de red aparece
+3. ncpa.cpl -> IPv4 -> 192.168.137.1 / 255.255.255.0
+4. telnet 192.168.137.2
+5. Login: root / (Enter, sin contrasena)
+6. = SHELL REMOTO A LA CONSOLA
+
+Con el shell remoto, el debugging de la pantalla azul se hace EN VIVO (dmesg, /proc, /sys sin desmontar la SD).
