@@ -13,6 +13,18 @@ echo "=== make_board_dts (fix-forward: /hcrtos/ de FÁBRICA) ==="
 python3 "$REPO/scripts/make_bl_dts.py" > /dev/null
 echo "cuerpo generado: $(wc -l < "$OUT") líneas"
 
+# 1b. Fase 9-6e FIX (2026-09-24): desactivar monitoreo USB del AVP para usb0.
+# El AVP firmware monitorea el USB controller 0 (0x18844000) via su nodo /hcrtos/usb0.
+# Cuando detecta un gadget CDC-NETWORK (NCM/RNDIS) en modo peripheral, aplica un
+# overlay azul al display (patron uniforme 06f2 en el fb). Este es comportamiento
+# del firmware AVP — no del kernel Linux. Al poner status="disabled" en el nodo usb0
+# del /hcrtos/, el AVP no monitorea este controlador y no detecta el gadget networking.
+# El gate de /hcrtos/ permite cambios en "status" (allowlist).
+# EVIDENCIA: ACM (no networking) = sin azul; NCM/RNDIS (networking) = azul;
+# amprpc sin display commands durante azul; GE reset sin efecto; fb keepalive sin efecto.
+sed -i '/usb0 {/,/};/{s/status = "okay";/status = "disabled";/}' "$OUT"
+echo "fase9-6e: AVP usb0 monitoring disabled (gadget NCM sin overlay azul)"
+
 # 2. añadir macros del hook SDK (necesarias para el entry addr del bootloader)
 TMP="$OUT.tmp"
 cat > "$TMP" << 'HDR'

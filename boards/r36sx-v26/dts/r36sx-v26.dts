@@ -470,7 +470,7 @@
 			interrupt-names = "mc\0dma";
 			interrupts = <0x35 0x34>;
 			reg = <0x18844000 0x1000>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		usb1 {
