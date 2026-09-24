@@ -1,0 +1,28 @@
+# 9105-musb-gadget-int-ep-pio (k512-only, 2026-09-23, Fase 9-6e):
+# disable DMA para INTERRUPT EPs en gadget mode. El vendor hcusbhsdma
+# corrupte memoria progresivamente con interrupt EPs: display (pantalla
+# azul ~30s) luego netdev (muere la red). MTP (bulk-only) no afectado.
+# Forzar PIO = lento pero sin corruption. Solo para 5.12.4.
+--- a/drivers/usb/musb/musb_gadget.c	2026-09-23 21:07:21.286075870 -0500
++++ b/drivers/usb/musb/musb_gadget.c	2026-09-23 21:07:21.305549450 -0500
+@@ -1053,6 +1053,20 @@
+ 
+ 		musb_ep->dma = c->channel_alloc(c, hw_ep,
+ 				(desc->bEndpointAddress & USB_DIR_IN));
++
++		/* 9105 port (9-6e): disable DMA for INTERRUPT endpoints in gadget
++		 * mode. The vendor DMA (hcusbhsdma.c) progressively corrupts
++		 * memory when handling interrupt EPs — display corruption at
++		 * ~30s (blue screen), then network stack dies. MTP (bulk-only,
++		 * no interrupt EP) is unaffected. Forcing PIO for interrupt EPs
++		 * avoids the DMA path entirely; slower but safe. */
++		if (musb_ep->dma &&
++		    (musb_ep->type == USB_ENDPOINT_XFER_INT)) {
++			c->channel_release(musb_ep->dma);
++			musb_ep->dma = NULL;
++			pr_info("%s: interrupt EP -> PIO mode (no DMA, 9105)\n",
++				musb_ep->end_point.name);
++		}
+ 	} else
+ 		musb_ep->dma = NULL;
+ 
