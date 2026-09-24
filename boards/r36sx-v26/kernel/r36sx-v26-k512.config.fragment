@@ -29,6 +29,12 @@ CONFIG_USB_F_MTP=y
 # NOTA: el interrupt EP del gadget = el sospechoso de la pantalla azul — NCM
 # tambien lo usa para notificaciones; si el azul persiste con NCM = debug kernel.
 CONFIG_USB_CONFIGFS_NCM=y
+# 9-6e v13 (2026-09-24): USB Serial (CDC-ACM) — shell via COM port.
+# El AVP firmware reacciona al CDC-NCM con overlay azul (probado exhaustivamente:
+# GE reset, drcoff, fb keepalive, interrupt EP PIO, todo fallo). CDC-ACM es una
+# clase USB DIFERENTE (modem, no network) — el AVP probablemente no la detecta.
+# No crea netdev, no usa u_ether. Shell directo via /dev/ttyGS0 + PuTTY en el PC.
+CONFIG_USB_CONFIGFS_ACM=y
 CONFIG_USB_CONFIGFS_RNDIS=y
 CONFIG_USB_F_PTP=y
 
