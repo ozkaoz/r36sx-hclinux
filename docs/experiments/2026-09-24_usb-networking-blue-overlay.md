@@ -55,12 +55,32 @@ display cuando ve un gadget de red (patrón uniforme `06 f2` = azul RGB565).
 - amprpc: sin comandos de display durante el azul.
 - DTB desplegado: `usb0` `status="disabled"` (decompilado).
 
+## RESULTADO TEST FÍSICO v15+NCM (2026-09-24)
+
+Procedimiento: SD con flags `net.mode` + `ncm.mode`, kernel desplegado `fd4f0d0e`
+(v15, DTS `usb0 status=disabled`) + `dtb.bin` `116ddf26`. Entrada USB MODE →
+`net_ncm.sh`.
+
+- PC reconoce el **adaptador de red** (CDC-NCM) y `telnet 192.168.137.2` da shell
+  root en la consola.
+- **A los ~30 s aparece la pantalla azul.** → **Hipótesis v15 REFUTADA**:
+  deshabilitar `status` del nodo `/hcrtos/usb0` **NO** evita el overlay.
+- Tras pulsar **B** (salida de net mode) vuelve al menú, pero **persiste una capa
+  azul tipo filtro** sobre toda la UI (el estado de display del AVP queda pegado;
+  no se limpia al desbindear el gadget).
+- Evidencia `NET_MODE_DEBUG.log` (SD): gadget creado 00:00:12, `usb0 UP`,
+  `telnetd OK`, B exit 00:01:45, `restore done rc=0`.
+
+**Conclusión:** el disparador correlaciona con la **presencia del network gadget
+(`netdev`/`u_ether`)**, no con la subclase CDC ni con el nodo DTS `usb0`. ACM
+(sin netdev) no lo dispara. El efecto es **stateful en el AVP**.
+
 ## Próximos pasos
 
 1. Desplegar `7d87d15c` (kernel ECM) en `cubegm/vmlinux.uImage` — **autorización
    clase F requerida**.
-2. Test físico: crear flag `net.mode` en la raíz SD → conectar USB → verificar
-   adaptador de red en Windows + `telnet 192.168.137.2` **sin overlay azul**.
+2. ~Test físico v15+NCM ya ejecutado: NEGATIVO (azul persiste)~ — ver resultado
+   arriba. Siguiente: experimento de una variable (ver CURRENT.md NEXT ACTION).
 3. Si ECM no dispara azul: promover a transporte por defecto y validar
    navegación/exit limpios (CURRENT.md + CHANGELOG + PHYSICAL PASS).
 4. Si ECM dispara azul: el discriminante es la presencia de `netdev`/u_ether, no

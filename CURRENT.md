@@ -19,7 +19,7 @@ Trabajo FUERA del árbol git (Scripts del stack) vive en el fork TreeFrogUI (`D:
 - **NCM** (`ncm.mode`): Windows detecta la consola como ADAPTADOR DE RED (CDC-NCM nativo) + `telnet 192.168.137.2` → root. **PERO dispara el overlay azul del AVP.**
 - **CDC-ACM serial** (`net_serial.sh`): shell por COM, **sin pantalla azul** → el AVP reacciona al *network gadget*.
 - **Overlay azul**: comportamiento del firmware AVP (fb con relleno uniforme `06 f2`; NO es corrupción DMA — el 9106 está en dead code). El kernel sigue vivo bajo el azul (telnet + red funcionan).
-- **v15** (`2fe467e`): fix por DTS — `usb0 status="disabled"` en `/hcrtos/`. Desplegado en la SD (kernel `fd4f0d0e` + dtb `116ddf26`), **sin PHYSICAL PASS documentado**.
+- **v15** (`2fe467e`): fix por DTS — `usb0 status="disabled"` en `/hcrtos/`. Desplegado (`fd4f0d0e` + dtb `116ddf26`) y **TEST FÍSICO 2026-09-24: REFUTADO** — con NCM, adaptador de red OK ~30 s y luego overlay azul; tras B queda una capa azul persistente sobre el menú.
 - **v16 ECM** (subclase 06, misma familia que ACM probada sin azul, con netdev): kernel `7d87d15c` **compilado (build #42, 2026-09-24 12:19), NO desplegado**. `net_mode.sh` default = ECM (`ncm.mode` → NCM).
 
 ### Resto de 9-6
@@ -71,7 +71,11 @@ e321b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 
 ## NEXT EXACT ACTION
 
-**9-6e: desplegar el kernel ECM `7d87d15c` en la SD y validar físicamente** (requiere autorización clase F):
+**9-6e: aislar el disparador del overlay azul** (evidencia 2026-09-24: es el network gadget `netdev`/`u_ether`, stateful en el AVP; v15 DTS refutado). Opciones de una variable, en orden:
+(a) **presencia vs tráfico**: bindear NCM y NO conectar el PC — ¿azul igual? (sin tocar kernel);
+(b) **subclase CDC**: desplegar kernel ECM `7d87d15c` y test;
+(c) **controlador**: bindear el gadget a `musb-hdrc.1.auto` (usb@18850000) en vez de usb0.
+Luego, lo de antes:
 1. Copiar `~/work/r36sx-hclinux/build/r36sx-v26-k512/images/vmlinux.uImage` → `cubegm/vmlinux.uImage` (dtb `116ddf26` ya desplegado). Backup del uImage actual.
 2. En la consola: crear flag `net.mode` en la raíz SD → conectar USB → verificar adaptador de red en Windows + `telnet 192.168.137.2` **sin overlay azul**.
 3. Si PASS: promover ECM + actualizar CURRENT/CHANGELOG/ROADMAP a PHYSICAL PASS. Si azul: el discriminante es `netdev`/u_ether, no la subclase → volver a ACM serial como transporte de producción.
