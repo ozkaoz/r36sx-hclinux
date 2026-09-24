@@ -115,7 +115,7 @@ NPOWN=$(find "$OWN" -maxdepth 1 -name '*.patch' 2>/dev/null | wc -l)
 OWNVER="$PROJ/patches/buildroot/linux-$KVER"
 NVOWN=$(find "$OWNVER" -maxdepth 1 -name '*.patch' 2>/dev/null | wc -l)
 NVEXP=1
-[ "$KVER" = "5.12.4" ] && NVEXP=5
+[ "$KVER" = "5.12.4" ] && NVEXP=6
 [ "$NVOWN" -eq "$NVEXP" ] && ok "set repo patches/buildroot/linux-$KVER = $NVOWN patch (versionado, esperado $NVEXP)" || bad "set repo versionado linux-$KVER = $NVOWN (esperado $NVEXP)"
 [ "$NS9" -eq 4 ] && ok "SDK sincronizado: 4 patches propios 900X-*.patch en linux-$KVER" \
   || { [ "$NS9" -eq 0 ] && echo "  [INFO] SDK linux-$KVER sin 900X aún (build_kernel.sh no corrido para esta versión; árbol verificado arriba)" \
