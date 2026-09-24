@@ -57,19 +57,28 @@ None technical.
 
 ## NEXT EXACT ACTION
 
-**Debug de la pantalla azul CON SHELL REMOTO (la herramienta ya funciona).**
-1. SD a la consola → boot → USB Mode (con net.mode) → conectar cable → telnet 192.168.137.2 → root/Enter
-2. Con el shell activo mientras la pantalla está azul:
-   - `dmesg | tail -50` (buscar el momento exacto de la corrupción)
-   - `cat /proc/iomem | head -30` (el mapa de memoria — el cmd que crasheo la conexión la última vez)
-   - `dd if=/dev/fb0 bs=16 count=1 | od -A x -t x1` (el contenido del framebuffer — ¿corrupto?)
-   - `cat /sys/class/graphics/fb0/state` + `cat /sys/class/graphics/fb0/mode`
-   - Probar reset del display: `echo 4 > /sys/class/graphics/fb0/blank; echo 0 > /sys/class/graphics/fb0/blank`
-   - `cat /proc/interrupts` (¿el IRQ del musb está en storm?)
-3. Aislamiento adicional: crear el gadget SIN ifconfig (gadget conectado, red inerte) → si no hay azul, el trafico del netdev es el trigger
-4. Si el reset del display funciona remotamente: un script watchdog que lo mantiene vivo = workaround inmediato
+**9-6e: PANTALLA AZUL — TEORIA REVOCADA, NUEVA DIRECCION.**
 
-Otras prioridades 9-6:
-- WiFi (9-6d): drivers built-in (rtlwifi/rtl8xxxu) — el module loader sigue ROTO (9-6c: resolve_symbol OOPS)
-- ADB (9-6f): functionfs + adbd
-- La pantalla azul = prioridad #1 con el shell remoto como herramienta de investigación
+HALLAZGO CRITICO DEL DIAGNOSTICO EN VIVO (BLUE_DIAG.log):
+- El framebuffer contiene `06 f2` UNIFORME (todo el buffer, inicio/centro/final) = NO es corrupcion random de DMA. Es un PATRON DELIBERADO.
+- En RGB565: 0xF206 = azul dominante — coincide con la pantalla azul visible.
+- El AVP reporta `rgb: ff0000ff` — el AVP SABE que el display esta azul (su estado interno).
+- CONFIG_MUSB_DMA_XFER_ALIGN NO ESTA ACTIVADO — el bloque con el URB access (9106) NUNCA COMPILA. Toda la teoria del URB/DMA era INCORRECTA — ese codigo no corre.
+- El 9105 (interrupt EP PIO) SI esta activo (confirmado en dmesg: "ep2in: interrupt EP -> PIO mode").
+- NO hay kernel OOPS. El kernel esta vivo. Telnet funciona.
+
+REVISED UNDERSTANDING:
+La pantalla azul NO es corrupcion de memoria — es algo que LLENA el framebuffer con un patron uniforme deliberadamente. Candidatos:
+1. El AVP: cuando el musb entra en modo peripheral, el display handler del AVP podria llenar el fb con un color de "estado" (ff0000ff = azul).
+2. El GE: el engine grafico podria estar limpiando el fb cuando algo en el display pipeline cambia.
+3. El stack TreeFrogUI (picoarch/hwdisp): cuando el bloquea (USB mode), podria escribir un patrón al fb.
+
+PROXIMA INVESTIGACION:
+1. Con el shell remoto (telnet), mientras la pantalla esta azul, VERIFICAR quien escribe al fb:
+   - `cat /proc/iomem | grep -i fb` — la direccion fisica del fb
+   - Despues del blank/unblank, ver si el patron `06 f2` reaparece o si se restaura el menu
+   - `echo 1 > /proc/sys/kernel/sysrq; echo t > /proc/sysrq-trigger` (dump de todos los stacks — ver si el GE/AVP tiene un thread escribiendo)
+2. Buscar en el codigo del stack (picoarch/hwdisp/avp) que escribe `0xF206` o hace fill del fb
+3. Revisar los fonts del SDK: el `rgb: ff0000ff` del virtuart es un comando/display del AVP
+
+El 9105 queda como defense-in-depth. El 9106 esta en dead code (CONFIG no activado) — no hace dano pero tampoco ayuda.
