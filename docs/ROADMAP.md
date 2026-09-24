@@ -32,7 +32,7 @@ Llevar el kernel 5.12.4 a su punto de desarrollo máximo antes de cualquier migr
 | **9-6b** | Reconciliación DTB | build DTB (b9b800c8, nodos uart@1/pinmux del D-2b factory-derived) vs SD-proven 1258f1eb — validar físicamente o reconciliar | PENDIENTE |
 | **9-6c** | Latencia de display | t2: display init lento en 5.12 (posible timeout AVP-side HDMI PHY); boot 4.4=8s vs 5.12~10s+; investigar y pulir | PENDIENTE |
 | **9-6d** | Wi-Fi | drivers en-tree 5.12 (rtlwifi/rtl8xxxu ya compilados como módulos) + módulos vendor (ssv6x5x?); levantar wlan en hardware (si la consola tiene antena/USB dongle) | PENDIENTE |
-| **9-6e** | RNDIS | USB gadget RNDIS (CDC Ethernet) — networking por USB: CONFIG_USB_GADGET + f_rndis + bridge/DHCP | PENDIENTE (depende 9-6a) |
+| **9-6e** | Red USB + overlay AVP | MTP PASS; NCM/RNDIS funcionan (adaptador de red + shell remoto) pero disparan el overlay azul del AVP (display-only). v15: fix DTS `usb0 disabled`. v16: ECM `7d87d15c` compilado sin deploy. Stack en fork `net-mode-app` | ⏳ EN CURSO |
 | **9-6f** | ADB | Android Debug Bridge via USB FunctionFS (adbd userspace + CONFIG_USB_FUNCTIONFS) — shell/debug sin cable serial | PENDIENTE (depende 9-6a) |
 
 ## **Punto de decisión (post 9-6): kernel 5.12.4 a máximo desarrollo**

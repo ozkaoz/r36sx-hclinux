@@ -2,6 +2,23 @@
 
 Formato: una línea por iteración; detalle técnico en `docs/experiments/` y commits.
 
+## 2026-09-24
+
+- **Iteración 9-6e v15-v16 (USB networking / overlay AVP):** la pantalla azul al activar un gadget CDC-network es **comportamiento del AVP**, no corrupción del kernel (fb con relleno uniforme `06 f2`; `CONFIG_MUSB_DMA_XFER_ALIGN` no activo → el 9106 está en dead code; 9105 sin efecto). CDC-ACM (modem) **no** dispara el azul; NCM/RNDIS sí. **v15** (`2fe467e`): fix por DTS — `make_board_dts.sh` deja `usb0 status="disabled"` en `/hcrtos/` (el AVP monitorea el controller 0 vía su nodo); DTB `116ddf26` desplegado, gate NOR-DTB PASS. **v16:** estrategia CDC-ECM (subclase 06, misma familia que ACM pero con netdev); fragment + `net_mode.sh` default ECM. Kernel ECM `7d87d15c` **compilado, NO desplegado**. Sin PHYSICAL PASS. Docs: `docs/experiments/2026-09-24_usb-networking-blue-overlay.md`; stack canonizado en el fork TreeFrogUI `apps/net_mode/` (branch `net-mode-app`, `d9ef355`).
+
+## 2026-09-23
+
+- **Iteración 9-6b (USB Mode MTP PHYSICAL PASS ✅):** Windows detecta "TreeFrogUI MTP" + transferencia verificada físicamente en kernel 5.12.4. Fixes: DUAL_ROLE, S90configfs, módulos visibles vía bind, kmod standalone, gadget stack **built-in** (workaround al OOPS del module loader), y el bug raíz del reboot: `config_group_init_type_name` ANTES de `usb_os_desc_prepare_interf_dir` en el port 9103 de f_mtp (list-API 5.12 vs array-API 4.4). Kernel `fdd1d7cc`.
+- **Iteración 9-6e (shell remoto + red):** NCM = Windows detecta adaptador de RED (no COM7) + telnet root bajo la pantalla azul; `passwd`/`shadow` en `rootfs/etc`; 5 ports kernel versionados (9101-9105); app `net_mode` upstreamable (AGENTS §15). Overlay azul documentado como pendiente.
+- **Backup known-good:** `D:/R36SX/sd-full-backups/2026-09-23_mtp-knowngood/` (MTP PASS ×2, hash-verified).
+
+## 2026-09-22
+
+- **Fase 9-4 COMPLETE — kernel 5.12.4 CLEAN PHYSICAL PASS ✅:** SD purgada de kernel-4 (preservado hash-verified en D:) y la consola arranca SOLO con 5.12.4: menú TreeFrogUI + audio (ADR-012 validado en 5.12) + navegación (port 9101 timer + HC_INPUT) + entrada/salida de emuladores. Boot ~10s. cubegm = contrato NOR de 4 archivos. uImage `9731d6a5`.
+- **Fase 9-6a (host USB):** port 9102 (timeval→ktime) + port 9103/9104 (f_mtp/f_ptp/AOA/audio_source desde el patch vendor 0024) + DUAL_ROLE + S90configfs. USB HOST: PHYSICAL PASS (stick OK).
+- **Fase 9-6c (module loader roto):** el kernel 5.12 OOPSEA en `resolve_symbol` (module.c:1411) con CUALQUIER `.ko` — el loader muere con SIGSEGV y el mutex queda lockeado. Workaround: gadget functions built-in. Fix real pendiente (bloquea wifi-modules).
+- **Iteración 9-1/9-2/9-3:** kernel 5.12.4 BUILD PASS desde el SDK (defconfig k512 + fragment versionado); patch set propio canonizado en `patches/buildroot/linux/` (900X) — ADR-014 (reproducibilidad).
+
 ## 2026-09-21
 
 - **CONSOLA REVIVIDA ✅** — La R36SX V2.6 fue restaurada exitosamente mediante el modo chip-en-blanco del BootROM (corto de pines 2/4 del NOR SPI) + HCProgrammer USB. El archivo que funcionó fue `HCFOTA-factory-restore.bin` (988.648 B, generado por HCFota_Generator con el DDR-init de fábrica + hc16xx_jtag_updater.bin + las 3 particiones del NOR con bytes del dump). El NOR quedó con los bytes exactos de fábrica. TreeFrogUI bootea correctamente. Hallazgos: HCProgrammer requiere ambos .exe abiertos simultáneamente; el formato de firmware correcto es HCFOTA.bin (no spinorflash.bin crudo); el modo USB del BootROM persiste mientras el corto 2/4 esté activo. Docs: postmortem (addendum recuperación exitosa).

@@ -1,0 +1,74 @@
+# 2026-09-24 — 9-6e: USB networking + la "pantalla azul" (overlay AVP)
+
+**Fase:** 9-6e (RNDIS/networking USB)
+**Kernel:** 5.12.4 (variante k512)
+**Estado:** EN CURSO — sin PHYSICAL PASS. El kernel ECM está compilado, **no desplegado**.
+
+## Objetivo
+
+Habilitar networking por USB (adaptador de red en el PC + shell remoto root en la
+consola) sin disparar el **overlay azul** que el firmware AVP pinta sobre el
+display cuando ve un gadget de red (patrón uniforme `06 f2` = azul RGB565).
+
+## Cronología de teorías (una variable por experimento)
+
+1. **RNDIS** (`net_rndis.sh`, kernel `651f1ca5`): Windows Código 28 (driver
+   `usb8023.sys` deprecado) + pantalla azul. Rollback.
+2. **CDC-NCM** (`net_ncm.sh`, kernel `7dc0c9dc`): Windows detecta el adaptador de
+   RED de forma nativa, y **funciona**: `usb0` 192.168.137.2 + `telnetd` → shell
+   root en la consola. PERO el overlay azul persiste.
+3. **Teoría DMA (9116) REVOCADA**: el framebuffer contiene `06 f2` UNIFORME en
+   todo el buffer — no es corrupción de DMA sino un **relleno deliberado**. Además
+   `CONFIG_MUSB_DMA_XFER_ALIGN` no está activado → el bloque con el supuesto bug
+   (9106) ni siquiera compila. El 9105 (interrupt EP → PIO) sí está activo y **no**
+   elimina el azul; queda como defensa en profundidad.
+4. **CDC-ACM** (`net_serial.sh`): clase modem (`02/02/01`), sin `netdev`, sin
+   `u_ether`. **Prueba ACM = sin pantalla azul** → el AVP reacciona al *network
+   gadget*, no a cualquier gadget. Shell vía `/dev/ttyGS0` + PuTTY.
+5. **v15 — FIX POR DTS (hipótesis raíz)**: el AVP monitorea el USB controller 0
+   (`0x18844000`) mediante su nodo `/hcrtos/usb0` (`dr_mode="host"`). Al activarse
+   un gadget CDC-network en peripheral, el AVP aplica el overlay. Fix:
+   `scripts/make_board_dts.sh` hace `sed` post-generación para dejar
+   `status="disabled"` en `usb0` del `/hcrtos/` (allowlist del gate NOR-DTB).
+   DTB de fábrica-only difference documentada. Commit `2fe467e`.
+
+## Estado actual (al corte de esta iteración)
+
+- **Desplegado en SD:** kernel `fd4f0d0e` (v15) + `dtb.bin` `116ddf26`
+  (`usb0 status=disabled` verificado por decompilación). **Sin PHYSICAL PASS
+  documentado.**
+- **Compilado, sin desplegar:** build #42 (2026-09-24 12:19) → `vmlinux.uImage`
+  `7d87d15c97ba966e1fc0a61b6867aa3f44e14f7619484ea775fad53ce7f89cb4` (6.887.103 B)
+  con `ECM=y NCM=y ACM=y RNDIS=y` + `usb0 disabled`. Artefacto:
+  `~/work/r36sx-hclinux/build/r36sx-v26-k512/images/vmlinux.uImage`.
+- **Estrategia ECM:** CDC-ECM (subclass `06`) es la misma familia que ACM
+  (probada sin azul) pero con `netdev`. `net_mode.sh` pasa a **default = ECM**
+  (`ncm.mode` → NCM). Los scripts viven en el fork TreeFrogUI
+  (`apps/net_mode/`, branch `net-mode-app`, commit `d9ef355`).
+
+## Evidencia
+
+- fb de diagnóstico en vivo (`BLUE_DIAG.log`): patrón `06 f2` uniforme;
+  AVP reporta `rgb: ff0000ff`.
+- ACM sin azul / NCM-RNDIS azul (prueba diferencial).
+- GE reset, `drcoff`, fb keepalive, interrupt-EP-PIO (9105): **todos sin efecto**.
+- amprpc: sin comandos de display durante el azul.
+- DTB desplegado: `usb0` `status="disabled"` (decompilado).
+
+## Próximos pasos
+
+1. Desplegar `7d87d15c` (kernel ECM) en `cubegm/vmlinux.uImage` — **autorización
+   clase F requerida**.
+2. Test físico: crear flag `net.mode` en la raíz SD → conectar USB → verificar
+   adaptador de red en Windows + `telnet 192.168.137.2` **sin overlay azul**.
+3. Si ECM no dispara azul: promover a transporte por defecto y validar
+   navegación/exit limpios (CURRENT.md + CHANGELOG + PHYSICAL PASS).
+4. Si ECM dispara azul: el discriminante es la presencia de `netdev`/u_ether, no
+   la subclase CDC → volver a ACM serial como transporte de producción y documentar
+   el límite.
+
+## Artefactos / commits relacionados
+
+- `2fe467e` v15 (DTS usb0 disabled) · `3098886` v13 (ACM) · `eacecb4` (revocación
+  DMA) · `fd0f840` v9 (9106, dead code) · `5a0e6c7` v8 (9105)
+- Fork TreeFrogUI `net-mode-app` `d9ef355` (apps/net_mode + dispatcher)

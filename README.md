@@ -4,20 +4,23 @@
 
 ## Current State
 
-**Phases 0-8 COMPLETE — console physically boots with our own kernel + our own rootfs + TreeFrogUI fully functional.**
+**Phases 0-9 COMPLETE — console physically boots with our own kernel + our own rootfs + TreeFrogUI fully functional.**
+**Phase 9-6 (maximize kernel 5.12.4) IN PROGRESS.**
 
 What works:
-- Own kernel 4.4.186 (provenance-gated build, ABI fix ADR-012)
-- Own rootfs (Buildroot, 10.8 MiB)
+- Own kernel 5.12.4 (CLEAN PHYSICAL PASS: menu, audio, input, emulators; provenance-gated build, ABI fix ADR-012)
+- Own rootfs (Buildroot, ~10 MiB, deterministic embed)
 - TreeFrogUI fully functional (audio, video, emulator exit) — verified on hardware
+- USB Mode: MTP PHYSICAL PASS (Windows detection + file transfer)
+- USB networking: NCM/RNDIS network adapter + remote root shell work, but trigger the AVP **blue overlay** (display-only; kernel stays alive); CDC-ACM serial shell works with no overlay
 - Factory bootloader preserved (NOR contract documented, 2 attempts to replace resulted in bricks)
 - Recovery method proven (pin 2/4 short + HCProgrammer USB)
-- cubegm/ reduced to 5 files (NOR boot contract) + treefrog/ = full TreeFrogUI stack
+- cubegm/ reduced to 4 files (NOR boot contract) + treefrog/ = full TreeFrogUI stack
 
 ## Architecture
 
 ```
-BootROM → DDR-init → bootloader (stock, preserved) → AVP/HCRTOS (stock) → Linux 4.4.186 (ours) → TreeFrogUI
+BootROM → DDR-init → bootloader (stock, preserved) → AVP/HCRTOS (stock) → Linux 5.12.4 (ours) → TreeFrogUI
 ```
 
 ## Quick Start
@@ -37,7 +40,7 @@ sync
 - [Build Manual](docs/BUILD_MANUAL.md) — compilation guide + methodology
 - [TreeFrogUI Contract](docs/TREEFROG_UI_CONTRACT.md) — formal interface
 - [Post-mortem](docs/experiments/2026-09-20_postmortem-brickeo-bootloader.md) — bootloader lessons
-- [Roadmap](docs/ROADMAP.md) — phases 0-8 done, phase 9 deferred
+- [Roadmap](docs/ROADMAP.md) — phases 0-9 done; phase 9-6 (kernel max development) in progress
 
 ## Recovery
 

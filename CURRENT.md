@@ -1,6 +1,6 @@
 # CURRENT.md — Operational Snapshot (CACHE — Git is the truth)
 
-**Updated:** 2026-09-22 (PHASE 9: 9-1/9-2/9-3 DONE — kernel 5.12.4 BUILD PASS)
+**Updated:** 2026-09-24 (9-6e: red USB + overlay AVP; consolidación de documentación y del stack)
 **Rule:** small snapshot, no history. No changelog.
 
 ## PROJECT
@@ -9,43 +9,56 @@ r36sx-hclinux — reproducible Linux/HClinux platform for HiChip consoles (HC16x
 
 ## CURRENT PHASE
 
-**Fase 9-6e: USB NETWORKING + SHELL REMOTO FUNCIONANDO. La consola tiene:**
-- **MTP**: PHYSICAL PASS (Windows detecta "TreeFrogUI MTP", transferencia de archivos) — sin `net.mode` en la SD
-- **NCM Networking**: Windows detecta la consola como ADAPTADOR DE RED (CDC-NCM nativo, no COM7) — con `net.mode` en la SD
-- **Shell remoto**: telnet 192.168.137.2 → root (sin contraseña) — FUNCIONA bajo la pantalla azul
-- **Pantalla azul**: persiste con cualquier gadget de networking (NCM/RNDIS); el 9105 (interrupt EP PIO) NO la fixeo — la causa es el BULK EP DMA con trafico de red o la interaccion AVP/display con el modo peripheral. DISPLAY-ONLY: el kernel sigue vivo (telnet + red funcionan debajo del azul). Investigacion pendiente con shell remoto.
+**Fase 9-6 — kernel 5.12.4 a máximo desarrollo.**
 
-Kernel: d7bc2597 (5 ports versionados 9101-9105 + 4 genericos 9001-9004)
-Stack: app net_mode (upstreamable, AGENTS.md §15) + usb_mtp.sh dispatcher + passwd/shadow en rootfs/etc + telnetd busybox en rootfs/sbin
+Trabajo FUERA del árbol git (Scripts del stack) vive en el fork TreeFrogUI (`D:\GitHub\TreeFrogUI`, branch **`net-mode-app`**, commit `d9ef355`) — ver AGENTS §15.
 
-## CURRENT OBJECTIVE
+### 9-6e — USB NETWORKING (EN CURSO)
 
-9-4: physical milestone-1 — swap ONLY cubegm/vmlinux.uImage on SD (keep SD dtb.bin 1258f1eb + treefrog/ + rootfs), serial/visual boot evidence. Requires explicit authorization (class F). Then 9-5 TreeFrogUI+ABI revalidation, 9-6 musb port + DTB reconciliation.
+- **MTP**: PHYSICAL PASS (Windows detecta "TreeFrogUI MTP" + transferencia) — sin `net.mode` en la SD.
+- **NCM** (`ncm.mode`): Windows detecta la consola como ADAPTADOR DE RED (CDC-NCM nativo) + `telnet 192.168.137.2` → root. **PERO dispara el overlay azul del AVP.**
+- **CDC-ACM serial** (`net_serial.sh`): shell por COM, **sin pantalla azul** → el AVP reacciona al *network gadget*.
+- **Overlay azul**: comportamiento del firmware AVP (fb con relleno uniforme `06 f2`; NO es corrupción DMA — el 9106 está en dead code). El kernel sigue vivo bajo el azul (telnet + red funcionan).
+- **v15** (`2fe467e`): fix por DTS — `usb0 status="disabled"` en `/hcrtos/`. Desplegado en la SD (kernel `fd4f0d0e` + dtb `116ddf26`), **sin PHYSICAL PASS documentado**.
+- **v16 ECM** (subclase 06, misma familia que ACM probada sin azul, con netdev): kernel `7d87d15c` **compilado (build #42, 2026-09-24 12:19), NO desplegado**. `net_mode.sh` default = ECM (`ncm.mode` → NCM).
+
+### Resto de 9-6
+
+| Sub | Ítem | Estado |
+|---|---|---|
+| 9-6a | Port MUSB/USB (host) | ✅ host PHYSICAL PASS |
+| 9-6b | USB Mode MTP gadget | ✅ PHYSICAL PASS (kernel `fdd1d7cc`; MTP `69f247dc`) |
+| 9-6c | Module loader (`resolve_symbol` OOPS) | ⏳ PENDIENTE (workaround: built-ins) |
+| 9-6b' | Reconciliación DTB (SD-proven vs build) | ⏳ PENDIENTE |
+| 9-6c' | Latencia de display (5.12 ~10s vs 4.4 8s) | ⏳ PENDIENTE |
+| 9-6d | Wi-Fi | ⏳ PENDIENTE (depende 9-6c) |
+| 9-6e | Red USB / overlay AVP | ⏳ EN CURSO |
+| 9-6f | ADB (FunctionFS) | ⏳ PENDIENTE |
 
 ## CURRENT HEAD
 
-(see git log -1 — cache)
+`2fe467e` (v15) — caché; validar con `git log -1`.
 
 ## KNOWN-GOOD STATE
 
-- NOR = FACTORY (stock bootloader, not replaceable)
-- SD = kernel 5.12.4 69f247dc (gadget built-in + f_mtp order fix) + MTP PHYSICAL PASS (verificado 2x: deteccion Windows + transferencia + salida limpia)
-- cubegm/ = 4-file NOR boot contract + diag.enabled (activo para diagnostico)
-- Rollback fisico: USR-MTP: PHYSICAL PASS (Windows detecta + transferencia + salida limpia sin capa azul — confirmado 2026-09-23 en kernel 69f247dc)
-- RNDIS (9-6e): rolled back — dos bugs documentados (Win Codigo 28: descriptores del gadget; pantalla azul: regresion kernel RNDIS built-in) — iteracion dedicada pendiente
-- kmod real + telnetd busybox deployados en rootfs/ (inertes, reutilizables)
-- Backup known-good: D:/R36SX/sd-full-backups/2026-09-23_mtp-knowngood/ (fresco, hash-verified)
+- NOR = FACTORY (stock bootloader, NOT replaceable — 2 bricks).
+- SD = kernel 5.12.4 `fd4f0d0e` (v15) + `dtb.bin` `116ddf26` + rootfs propio + TreeFrogUI.
+- Backup known-good MTP: `D:/R36SX/sd-full-backups/2026-09-23_mtp-knowngood/` (hash-verified).
+- Rollback físico de USB Mode: MTP PHYSICAL PASS ×2.
+- cubegm/ = contrato NOR de 4 archivos + `diag.enabled`.
+- Rollback de kernel: goldens stock preservados (uImage `53b3e0b3`, dtb `1258f1eb`, avp `a9788995`).
 
 ## BUILD STATUS
 
-KERNEL 5.12.4 (k512 variant): BUILD PASS + CLEAN PHYSICAL PASS (menu/audio/input/emulators; 26 patches = 21 vendor + 4 own-900X + 1 own-9101).
-KERNEL 4.4.186: BUILD PASS (superseded on SD; buildable via base defconfig — deprecation decision pending).
-ROOTFS: deterministic embed (v6 flow). Gates: TOOLCHAIN/PATCH PASS.
-BOOTLOADER: NOT REPLACEABLE (2 attempts, 2 bricks — use factory bootloader).
+- **KERNEL 5.12.4 k512 (ECM)**: BUILD PASS → `7d87d15c` (ECM/NCM/ACM/RNDIS=y, `usb0 disabled`). **Pendiente deploy.**
+- **KERNEL 5.12.4 k512 (v15)**: desplegado (`fd4f0d0e`).
+- **ROOTFS**: embed determinista (v6 flow). Gates TOOLCHAIN/PATCH PASS.
+- **KERNEL 4.4.186**: superseado; buildable (deprecación pendiente).
+- **BOOTLOADER**: NO reemplazable.
 
 ## PHYSICAL STATUS
 
-CONSOLE OPERATIONAL: factory NOR + kernel 8e + own rootfs + TreeFrogUI working.
+CONSOLA OPERATIVA: NOR de fábrica + kernel 5.12.4 + rootfs propio + TreeFrogUI (MTP + red + shell remoto; overlay azul pendiente bajo networking).
 
 ## SOURCE SDK SHA256
 
@@ -53,32 +66,14 @@ e321b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 
 ## ACTIVE BLOCKERS
 
-None technical.
+- **9-6e**: overlay azul del AVP con gadget de red (display-only).
+- **9-6c**: module loader del kernel 5.12 (OOPS `resolve_symbol`).
 
 ## NEXT EXACT ACTION
 
-**9-6e: PANTALLA AZUL — TEORIA REVOCADA, NUEVA DIRECCION.**
+**9-6e: desplegar el kernel ECM `7d87d15c` en la SD y validar físicamente** (requiere autorización clase F):
+1. Copiar `~/work/r36sx-hclinux/build/r36sx-v26-k512/images/vmlinux.uImage` → `cubegm/vmlinux.uImage` (dtb `116ddf26` ya desplegado). Backup del uImage actual.
+2. En la consola: crear flag `net.mode` en la raíz SD → conectar USB → verificar adaptador de red en Windows + `telnet 192.168.137.2` **sin overlay azul**.
+3. Si PASS: promover ECM + actualizar CURRENT/CHANGELOG/ROADMAP a PHYSICAL PASS. Si azul: el discriminante es `netdev`/u_ether, no la subclase → volver a ACM serial como transporte de producción.
 
-HALLAZGO CRITICO DEL DIAGNOSTICO EN VIVO (BLUE_DIAG.log):
-- El framebuffer contiene `06 f2` UNIFORME (todo el buffer, inicio/centro/final) = NO es corrupcion random de DMA. Es un PATRON DELIBERADO.
-- En RGB565: 0xF206 = azul dominante — coincide con la pantalla azul visible.
-- El AVP reporta `rgb: ff0000ff` — el AVP SABE que el display esta azul (su estado interno).
-- CONFIG_MUSB_DMA_XFER_ALIGN NO ESTA ACTIVADO — el bloque con el URB access (9106) NUNCA COMPILA. Toda la teoria del URB/DMA era INCORRECTA — ese codigo no corre.
-- El 9105 (interrupt EP PIO) SI esta activo (confirmado en dmesg: "ep2in: interrupt EP -> PIO mode").
-- NO hay kernel OOPS. El kernel esta vivo. Telnet funciona.
-
-REVISED UNDERSTANDING:
-La pantalla azul NO es corrupcion de memoria — es algo que LLENA el framebuffer con un patron uniforme deliberadamente. Candidatos:
-1. El AVP: cuando el musb entra en modo peripheral, el display handler del AVP podria llenar el fb con un color de "estado" (ff0000ff = azul).
-2. El GE: el engine grafico podria estar limpiando el fb cuando algo en el display pipeline cambia.
-3. El stack TreeFrogUI (picoarch/hwdisp): cuando el bloquea (USB mode), podria escribir un patrón al fb.
-
-PROXIMA INVESTIGACION:
-1. Con el shell remoto (telnet), mientras la pantalla esta azul, VERIFICAR quien escribe al fb:
-   - `cat /proc/iomem | grep -i fb` — la direccion fisica del fb
-   - Despues del blank/unblank, ver si el patron `06 f2` reaparece o si se restaura el menu
-   - `echo 1 > /proc/sys/kernel/sysrq; echo t > /proc/sysrq-trigger` (dump de todos los stacks — ver si el GE/AVP tiene un thread escribiendo)
-2. Buscar en el codigo del stack (picoarch/hwdisp/avp) que escribe `0xF206` o hace fill del fb
-3. Revisar los fonts del SDK: el `rgb: ff0000ff` del virtuart es un comando/display del AVP
-
-El 9105 queda como defense-in-depth. El 9106 esta en dead code (CONFIG no activado) — no hace dano pero tampoco ayuda.
+Detalle y artefactos: `docs/experiments/2026-09-24_usb-networking-blue-overlay.md`.

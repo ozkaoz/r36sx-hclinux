@@ -1,6 +1,6 @@
 # AGENTS.md — Constitución permanente de r36sx-hclinux
 
-**Versión:** 1.0 (bootstrap)
+**Versión:** 1.1 (2026-09-24 — canonización del stack en el fork)
 **Repo:** https://github.com/ozkaoz/r36sx-hclinux
 **Objetivo:** plataforma Linux/HCLinux reproducible para R36SX V2.6 (HiChip HC16xx, MIPS) con TreeFrogUI estable.
 
@@ -178,12 +178,15 @@ Cualquier desarrollo que toque archivos del stack en la SD (los `treefrog/*` al 
 4. Validar físicamente en la consola.
 5. Documentar el estado resultante AQUÍ (CURRENT.md + CHANGELOG) — este repo es el journal físico de la plataforma completa.
 
-### Inventario de divergencias stack actuales (a canonizar en el fork)
-1. `usb_mode.sh`: check built-in `grep ... || [ -d "$CONFIG_ROOT/usb_gadget" ]` (9-6b — necesario con gadget functions built-in).
-2. `usb_mtp.sh`: shim dispatcher → `net_mode.sh` con flag `rndis.mode` en la raíz SD (9-6e v2).
-3. `rootfs/sbin/telnetd`: busybox multicall deployado desde la plataforma (el runtime /sbin viene del bind de `rootfs/`).
-4. `treefrog/modules/5.12.4-release/`: ELIMINADO (gadget built-in — el loader de modulos del kernel esta ROTO: OOPS resolve_symbol; ver 9-6c).
+### Estado de canonización del stack (2026-09-24)
+Integrado en el fork TreeFrogUI — branch **`net-mode-app`** (commit `d9ef355`), directorio **`apps/net_mode/`**:
+1. `usb_mode.sh`: check built-in `grep ... || [ -d "$CONFIG_ROOT/usb_gadget" ]` — EN EL FORK.
+2. `usb_mtp.sh`: shim dispatcher `net.mode` → `net_mode.sh`; sin flag = MTP clásico (upstream verbatim) — EN EL FORK.
+3. `apps/net_mode/`: `net_mode.sh` (default **ECM**; `ncm.mode` → NCM), `net_ecm.sh`, `net_ncm.sh` (RAM shell + exit_watcher), `net_rndis.sh`, `net_serial.sh`, `net_wifi.sh` (placeholder), `deploy_net_mode.sh`, `README.md` — EN EL FORK.
+4. `rootfs/sbin/telnetd`: busybox multicall deployado desde la plataforma (el runtime /sbin viene del bind de `rootfs/`).
+5. `treefrog/modules/5.12.4-release/`: ELIMINADO (gadget built-in — el loader de modulos del kernel esta ROTO: OOPS resolve_symbol; ver 9-6c).
 
-### Apps en desarrollo conjunto (handoff → fork)
-- **`apps/net_mode/`** (Conexión de Red): RNDIS USB networking implementado; WiFi placeholder pendiente (requiere 9-6c module loader o wifi built-in). Estructura upstreamable en `contrib/treefrogui-apps/net_mode/`.
-- Futuro: la UI FrogUI gana una entrada "NETWORK" que llama `net_mode.sh` directo (mismo wiring que USB MODE → usb_mtp.sh); `usb_mtp.sh` vuelve entonces al upstream verbatim.
+El handoff `contrib/treefrogui-apps/` fue integrado en el fork y **BORRADO de este repo** (regla de esta §15).
+
+### UI (submódulo frogui del fork)
+La entrada "NETWORK" ya existe en FrogUI (`netmode` → `net_mode.sh`, separada de USB MODE/MTP; commits del fork `c499497`/`b21503a`/`ada509c`). Cuando `net_mode.sh` sea first-class, `usb_mtp.sh` vuelve al upstream verbatim.
