@@ -9,9 +9,14 @@ r36sx-hclinux — reproducible Linux/HClinux platform for HiChip consoles (HC16x
 
 ## CURRENT PHASE
 
-**9-6b COMPLETE: USB MODE MTP PHYSICAL PASS (2026-09-23). Windows detecta TreeFrogUI MTP + transferencia de archivos VERIFICADA FISICAMENTE por el usuario.**
-La saga completa (14 test fisicos): HOST-only crash -> DUAL_ROLE | configfs sin mountpoint -> S90configfs | /lib sombreado por el bind del rootfs de fabrica -> modulos visibles | busybox+kmod segfault -> kmod standalone | **module loader del kernel OOPSEA en resolve_symbol con cualquier .ko -> gadget stack BUILT-INTO** | check built-in -> usb_gadget | **EL BUG RAIZ FINAL: f_mtp Android-4.4 llamaba usb_os_desc_prepare_interf_dir ANTES de config_group_init_type_name (inocuo con la array-API de 4.4, FATAL con la list-API de 5.12: list_add sobre grupo zerado -> NULL deref en el mkdir del gadget = el reinicio del kernel)** -> orden corregido en el 9103.
-Kernel: fdd1d7cc (todo el gadget built-in + ports 9101-9104 + el fix del orden). Stack: usb_mode.sh parchado (check usb_gadget; backup .prebuiltin.bak).
+**Fase 9-6e: USB NETWORKING + SHELL REMOTO FUNCIONANDO. La consola tiene:**
+- **MTP**: PHYSICAL PASS (Windows detecta "TreeFrogUI MTP", transferencia de archivos) — sin `net.mode` en la SD
+- **NCM Networking**: Windows detecta la consola como ADAPTADOR DE RED (CDC-NCM nativo, no COM7) — con `net.mode` en la SD
+- **Shell remoto**: telnet 192.168.137.2 → root (sin contraseña) — FUNCIONA bajo la pantalla azul
+- **Pantalla azul**: persiste con cualquier gadget de networking (NCM/RNDIS); el 9105 (interrupt EP PIO) NO la fixeo — la causa es el BULK EP DMA con trafico de red o la interaccion AVP/display con el modo peripheral. DISPLAY-ONLY: el kernel sigue vivo (telnet + red funcionan debajo del azul). Investigacion pendiente con shell remoto.
+
+Kernel: d7bc2597 (5 ports versionados 9101-9105 + 4 genericos 9001-9004)
+Stack: app net_mode (upstreamable, AGENTS.md §15) + usb_mtp.sh dispatcher + passwd/shadow en rootfs/etc + telnetd busybox en rootfs/sbin
 
 ## CURRENT OBJECTIVE
 
@@ -52,25 +57,19 @@ None technical.
 
 ## NEXT EXACT ACTION
 
-**9-6e v7 estado: NCM DETECTADO COMO RED POR WINDOWS + KERNEL VIVO CON SHELL REMOTO A UN PASO.**
+**Debug de la pantalla azul CON SHELL REMOTO (la herramienta ya funciona).**
+1. SD a la consola → boot → USB Mode (con net.mode) → conectar cable → telnet 192.168.137.2 → root/Enter
+2. Con el shell activo mientras la pantalla está azul:
+   - `dmesg | tail -50` (buscar el momento exacto de la corrupción)
+   - `cat /proc/iomem | head -30` (el mapa de memoria — el cmd que crasheo la conexión la última vez)
+   - `dd if=/dev/fb0 bs=16 count=1 | od -A x -t x1` (el contenido del framebuffer — ¿corrupto?)
+   - `cat /sys/class/graphics/fb0/state` + `cat /sys/class/graphics/fb0/mode`
+   - Probar reset del display: `echo 4 > /sys/class/graphics/fb0/blank; echo 0 > /sys/class/graphics/fb0/blank`
+   - `cat /proc/interrupts` (¿el IRQ del musb está en storm?)
+3. Aislamiento adicional: crear el gadget SIN ifconfig (gadget conectado, red inerte) → si no hay azul, el trafico del netdev es el trigger
+4. Si el reset del display funciona remotamente: un script watchdog que lo mantiene vivo = workaround inmediato
 
-LOGROS DEL ULTIMO TEST:
-- NCM funciona: Windows detecta la consola como DISPOSITIVO DE RED (no COM7) — el driver matching de CDC-NCM es nativo Windows 7+
-- El kernel VIVO: telnet conecto a 192.168.137.2 — el sistema Linux funciona por debajo de la pantalla azul (el display corrupto es cosmetic)
-- Login falla con "bad salt": el /etc de fabrica rootfs/ estaba VACIO — FIX APLICADO: passwd/shadow copiados (root sin contrasena)
-
-LA PANTALLA AZUL (causa confirmada):
-- Es DISPLAY-ONLY: el kernel, red, USB y telnetd funcionan debajo
-- Ocurre cuando un gadget USB con interrupt EP esta activo (RNDIS y NCM ambos lo usan, MTP no)
-- La causa raiz: el vendor musb gadget no maneja interrupt EPs correctamente -> DMA corrupte el framebuffer/display
-- El fix kernel-side (hcusbhsdma.c / hcusb.c) = la siguiente iteracion de debugging
-
-PROXIMO TEST (con la SD ya fixeada):
-1. SD a la consola -> enciende -> USB Mode -> A -> conecta cable
-2. Windows: adaptador de red aparece
-3. ncpa.cpl -> IPv4 -> 192.168.137.1 / 255.255.255.0
-4. telnet 192.168.137.2
-5. Login: root / (Enter, sin contrasena)
-6. = SHELL REMOTO A LA CONSOLA
-
-Con el shell remoto, el debugging de la pantalla azul se hace EN VIVO (dmesg, /proc, /sys sin desmontar la SD).
+Otras prioridades 9-6:
+- WiFi (9-6d): drivers built-in (rtlwifi/rtl8xxxu) — el module loader sigue ROTO (9-6c: resolve_symbol OOPS)
+- ADB (9-6f): functionfs + adbd
+- La pantalla azul = prioridad #1 con el shell remoto como herramienta de investigación
