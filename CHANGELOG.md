@@ -2,6 +2,10 @@
 
 Formato: una línea por iteración; detalle técnico en `docs/experiments/` y commits.
 
+## 2026-09-25
+
+- **Iteración 9-6e-CLOSE (USB networking PRODUCTION PHYSICAL PASS ✅ — 9-6e DONE):** test de producción del usuario con el stack NCM (`66a3cbe`) desplegado en SD: NETWORK → adaptador de red NCM en Windows + `telnet 192.168.137.2` → root bajo el overlay azul (limitación aceptada, ADR-015); salida limpia con B + `restore done rc=0` (evidencia `NET_MODE_DEBUG.log`). **9-6e cerrado**: NCM = transporte de red de producción; overlay azul = limitación documentada (eliminación = firmware AVP propio, aparcado clase D).
+
 ## 2026-09-24
 
 - **Iteración 9-6e-PPP (estrategia serial REFUTADA → NCM producción, ADR-015):** build #43 kernel `e07844bd` (8.271.323 B; PPP/PPP_ASYNC/PPP_DEFLATE/SLIP=y + pppd/chat en rootfs; backup `.preppp.bak` en SD) + `net_ppp.sh` (fork). Test físico: gadget ACM + `/dev/ttyGS0` + pppd OK, LCP ×10 **sin respuesta del PC** — **y el overlay azul apareció igual → REFUTADO**: el disparador es **networking activo en general** (gadget CDC-network o pppd sobre ACM), no el netdev del gadget. **Decisión (ADR-015): NCM = transporte de producción** (adaptador nativo Windows + telnet root; azul = limitación display-only aceptada); eliminar el azul solo vía firmware AVP propio (clase D, aparcado). Dispatcher del fork default → NCM (`net-mode-app` `66a3cbe`). Docs: `docs/experiments/2026-09-24_9-6e-ppp-slip.md`.

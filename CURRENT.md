@@ -13,9 +13,9 @@ r36sx-hclinux — reproducible Linux/HClinux platform for HiChip consoles (HC16x
 
 Trabajo FUERA del árbol git (scripts del stack) vive en el fork TreeFrogUI (`D:\GitHub\TreeFrogUI`, branch **`net-mode-app`**, commit `66a3cbe`) — ver AGENTS §15.
 
-### 9-6e — USB NETWORKING: CERRADO con limitación (ADR-015)
+### 9-6e — USB NETWORKING: ✅ DONE (producción NCM, ADR-015)
 
-- **Producción = NCM** (adaptador de red nativo Windows + `telnet 192.168.137.2` → root). Networking **PHYSICAL PASS** (bajo el azul).
+- **Producción = NCM** (adaptador de red nativo Windows + `telnet 192.168.137.2` → root). **PRODUCTION PHYSICAL PASS (usuario, 2026-09-25)**: adaptador de red + telnet root bajo el azul; sesión limpia con `restore done rc=0` (evidencia `NET_MODE_DEBUG.log`).
 - **Overlay azul del AVP = limitación aceptada, display-only**: lo dispara CUALQUIER networking activo — gadget CDC-network (NCM/ECM/RNDIS) y TAMBIÉN PPP sobre CDC-ACM (refutado 2026-09-24, incluso con LCP sin respuesta). Kernel/red/shell siguen vivos debajo; capa residual tras B hasta reboot. Vías de evitación AGOTADAS del lado kernel/DTS: DTS `usb0 disabled` (v15) ✗ · subclase CDC ✗ · serial-ACM networking ✗. Eliminarlo exige **firmware AVP propio → PARCADO (clase D)**.
 - ACM serial puro (shell interactivo, sin pppd) NO dispara azul — queda como transporte auxiliar.
 - PPP/SLIP del kernel + pppd del rootfs: retenidos experimentales (kernel desplegado los incluye).
@@ -30,7 +30,7 @@ Trabajo FUERA del árbol git (scripts del stack) vive en el fork TreeFrogUI (`D:
 | 9-6b' | Reconciliación DTB (SD-proven vs build) | ⏳ PENDIENTE |
 | 9-6c' | Latencia de display (5.12 ~10s vs 4.4 8s) | ⏳ PENDIENTE |
 | 9-6d | Wi-Fi | ⏳ PENDIENTE (depende 9-6c) |
-| 9-6e | Red USB / overlay AVP | ✅ CERRADO con limitación (NCM producción, ADR-015) |
+| 9-6e | Red USB / overlay AVP | ✅ DONE — NCM producción PRODUCTION PHYSICAL PASS (ADR-015) |
 | 9-6f | ADB (FunctionFS) | ⏳ PENDIENTE |
 
 ## CURRENT HEAD
@@ -57,7 +57,7 @@ HEAD = commit de cierre 9-6e-PPP (ADR-015 + refutación serial) — caché; vali
 
 ## PHYSICAL STATUS
 
-CONSOLA OPERATIVA: NOR de fábrica + kernel 5.12.4 `e07844bd` + rootfs propio + TreeFrogUI. MTP PHYSICAL PASS · networking NCM PHYSICAL PASS con overlay azul (limitación aceptada, ADR-015) · ACM serial sin azul. **Stack NCM desplegado en SD (2026-09-25, fork `66a3cbe`, read-back PASS)**: dispatcher default NCM + `net_ppp.sh` experimental + shim `usb_mtp.sh`. Test físico de producción PENDIENTE (usuario): activar NETWORK → NCM → adaptador de red + `telnet 192.168.137.2` (azul esperado y aceptado).
+CONSOLA OPERATIVA: NOR de fábrica + kernel 5.12.4 `e07844bd` + rootfs propio + TreeFrogUI. MTP PHYSICAL PASS · networking NCM **PRODUCTION PHYSICAL PASS (2026-09-25, usuario)**: adaptador de red + `telnet 192.168.137.2` root bajo el overlay azul (limitación aceptada, ADR-015); sesión `restore done rc=0` · ACM serial sin azul. Stack NCM desplegado en SD (fork `66a3cbe`, read-back PASS).
 
 ## SOURCE SDK SHA256
 
@@ -69,8 +69,8 @@ e3211b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 
 ## NEXT EXACT ACTION
 
-1. **Test físico (usuario) de la sesión de red de PRODUCCIÓN:** expulsar la SD del lector → arrancar consola → activar NETWORK → verificar adaptador de red NCM en Windows + `telnet 192.168.137.2` → root (azul esperado y aceptado, ADR-015) → B → apagar.
-2. Luego: elegir **9-6f ADB (FunctionFS)** o **9-6c fix del module loader**.
-3. PARA DESPUÉS (clase D, GO explícito): firmware AVP propio (`~/work/r36sx-hclinux/avp-build/`) — única vía para eliminar el overlay azul.
+1. Elegir siguiente punto de desarrollo (ver mapa en ROADMAP): **9-6c module loader** (recomendado — desbloquea 9-6d wifi) · 9-6f ADB · 9-6b' reconciliación DTB · 9-6c' latencia display.
+2. PARA DESPUÉS (clase D, GO explícito): firmware AVP propio (`~/work/r36sx-hclinux/avp-build/`) — única vía para eliminar el overlay azul; D-2c flash del bootloader propio (staging `1734c340`, dual-path inbrickeable — riesgo brick documentado).
+3. Post 9-6: decisión de migración 5.15 LTS (feasibility audit read-only primero).
 
 Detalle: `docs/experiments/2026-09-24_9-6e-ppp-slip.md` y `2026-09-24_usb-networking-blue-overlay.md` (+ addendum refutación PPP).
