@@ -1,7 +1,7 @@
 # Fase D-2b-v2: NOR-DTB del bootloader = FÁBRICA + path-prefix boot (defecto de raíz corregido)
 
 **Fecha:** 2026-09-25 (noche)
-**Contexto:** el flash D-2c-v1 (HCFOTA-own, staging 1734c340) instaló OK por
+**Contexto:** el flash D-2c-v1 (HCFOTA-own, staging 1734c340) instaló OK po
 HCProgrammer pero la consola no dio pantalla; recovery factory OK (método
 dominado). Diagnóstico: el NOR-DTB embebido de nuestro hcboot NO era el de
 fábrica (2.685 líneas de diff — era el DTS de proyecto regenerado): el panel
@@ -53,3 +53,37 @@ avp_work_notifier_*/mmz_*` (hcfb depende de mmz+avp_proxy).
   recalculados y re-check PASS; boot embebido == staging verificado).
 - Protocolo: mismo HCProgrammer que el v1 (que instaló OK) — Firmware
   select = HCFOTA-own-v2.bin. Recovery factory disponible e intacto.
+
+---
+
+# ADDENDUM v3 (2026-09-25, cierre): el flash v2 (NOR-DTB factory+boot) TAMBIEN dio pantalla negra
+
+-> **El problema no es el DTB: es el BINARIO hcboot del SDK** (Jul-2024)
+!= el "hcboot-custom" de fabrica (Dic-2025, linsen.chen/E3100_R36).
+Pivote definitivo:
+
+## v3 = bootloader de FABRICA + path-prefix patched (ingenieria minima)
+
+- Payload del factory (`factory-hcboot-decompressed.bin`, 1.101.500 B):
+  1 DTB (@0xd3ec0) + 2 strings "cubegm": el path-prefix (@0xda018) y un
+  fallback de logo (`/media/mmcblk0p2/cubegm/xgame-logo.hc` @0xdcc71,
+  se conserva — el logo real carga por external_files part4).
+- **Patch in-place de 7 bytes**: `cubegm\0` -> `boot\0\0\0` (mismo tamano;
+  el bootloader lee el string hasta \0).
+- Recompresion LZMA-alone con los parametros EXACTOS del factory
+  (props 0x5D lc3-lp0-pb2, dict 0x800000, uncompressed-size real en el
+  header — python escribe unknown+EOS: se parchea el size; el EOS queda
+  como bytes extra no leidos por el stub size-driven).
+- Ensamblado: DDR-init+stub factory INTACTOS + nuevo LZMA + padding 0xFF.
+- **GATE v3**: re-decompress del bin == payload fabrica-parcheado (True);
+  el codigo es 100% factory -> la pantalla-negra del SDK-hcboot queda
+  fuera de la ecuacion.
+- Staging `92b15901` (bootloader-r36sx-v26-faseD2c-v3-factorypatch.bin)
+  y **HCFOTA-own-v3.bin** (`ce5bb2fe`, version 2609250003, CRC PASS).
+
+## Pendiente
+
+Flash v3 (mismo protocolo HCProgrammer). Con boot-1 PASS -> boot-2
+(kernels propios en /boot/) -> boot-3 (cubegm/ eliminado 100%). La linea
+hcboot-SDK-compilado queda como investigacion posterior (por que no
+inicializa panel — diff configs/codigo contra el factory-decompressed).
