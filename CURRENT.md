@@ -29,7 +29,7 @@ Trabajo FUERA del árbol git (scripts del stack) vive en el fork TreeFrogUI (`D:
 | 9-6c | Module loader (`resolve_symbol` OOPS) | ✅ **DONE — PHYSICAL PASS** (2026-09-25, kernel `e45547a2`: insmod gf128mul rc=0 Live; fix 0005 + strip_vendor_8B) |
 | 9-6b' | Reconciliación DTB (SD-proven vs build) | ⏳ PENDIENTE |
 | 9-6c' | Latencia de display (5.12 ~10s vs 4.4 8s) | ⏳ PENDIENTE |
-| 9-6d | Wi-Fi | ⏳ PENDIENTE (depende 9-6c) |
+| 9-6d | Internet por USB | ✅ **F1 PHYSICAL PASS vía PC (ICS)** — F2 celular (drivers .ko) y modo daemon PENDIENTES |
 | 9-6e | Red USB / overlay AVP | ✅ DONE — NCM producción PRODUCTION PHYSICAL PASS (ADR-015) |
 | 9-6f | ADB (FunctionFS) | ⏳ PENDIENTE |
 
@@ -58,7 +58,7 @@ HEAD = commit de cierre 9-6e-PPP (ADR-015 + refutación serial) — caché; vali
 
 ## PHYSICAL STATUS
 
-CONSOLA OPERATIVA: NOR de fábrica + kernel 5.12.4 `e45547a2` (9-6c loader fix) + rootfs propio + TreeFrogUI. **Module loader FUNCIONAL** (gf128mul Live; primer módulo cargado de la historia del port 5.12). MTP PHYSICAL PASS · networking NCM **PRODUCTION PHYSICAL PASS (2026-09-25, usuario)**: adaptador de red + `telnet 192.168.137.2` root bajo el overlay azul (limitación aceptada, ADR-015); sesión `restore done rc=0` · ACM serial sin azul. Stack NCM desplegado en SD (fork `66a3cbe`, read-back PASS).
+CONSOLA OPERATIVA: NOR de fábrica + kernel 5.12.4 `e45547a2` (9-6c loader fix) + rootfs propio + TreeFrogUI. **Module loader FUNCIONAL** (gf128mul Live; primer módulo cargado de la historia del port 5.12). **INTERNET FUNCIONAL vía PC** (ICS: ping 8.8.8.8 + DNS + HTTP; evidencia 96d). MTP PHYSICAL PASS · networking NCM **PRODUCTION PHYSICAL PASS (2026-09-25, usuario)**: adaptador de red + `telnet 192.168.137.2` root bajo el overlay azul (limitación aceptada, ADR-015); sesión `restore done rc=0` · ACM serial sin azul. Stack NCM desplegado en SD (fork `66a3cbe`, read-back PASS).
 
 ## SOURCE SDK SHA256
 
@@ -70,7 +70,8 @@ e3211b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 
 ## NEXT EXACT ACTION
 
-1. Elegir siguiente punto: **9-6d Wi-Fi** (desbloqueado por 9-6c — carga real de .ko) · 9-6f ADB · 9-6b' reconciliación DTB · 9-6c' latencia display.
+1. **9-6d continúa**: (a) investigación del overlay azul durante red activa (experimentos de una variable: netdev sin IP / DOWN / renombrado / netns — el disparador correlaciona con netdev activo); (b) modo daemon del stack (navegar menú con red viva, fork); (c) vía celular: compilar USB_USBNET+CDCETHER+RNDIS_HOST como .ko (loader funcional) + consola host-mode + udhcpc.
+2. Luego: 9-6f ADB · 9-6b' DTB · 9-6c' latencia.
 2. Recomendación: cosechar evidencia final de la SD (results.log del PASS) al volver la SD al lector.
 3. PARA DESPUÉS (clase D, GO explícito): firmware AVP propio (`~/work/r36sx-hclinux/avp-build/`) — única vía para eliminar el overlay azul; D-2c flash del bootloader propio (staging `1734c340` — riesgo brick documentado).
 4. Post 9-6: decisión de migración 5.15 LTS (feasibility audit read-only primero).

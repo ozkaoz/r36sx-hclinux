@@ -1,0 +1,46 @@
+# evidence-96d-internet.log — 9-6d fase 1: INTERNET PHYSICAL PASS (2026-09-25)
+# Captura telnet 192.168.137.2 desde Windows (consola en NETWORK/NCM, kernel e45547a2).
+# PC: Windows ICS (Wi-Fi -> "Ethernet 4" UsbNcm Host Device), gateway 192.168.137.1.
+
+/ # ping -c 3 -W 2 192.168.137.1
+PING 192.168.137.1 (192.168.137.1): 56 data bytes
+64 bytes from 192.168.137.1: seq=0 ttl=128 time=1.200 ms
+64 bytes from 192.168.137.1: seq=1 ttl=128 time=0.992 ms
+64 bytes from 192.168.137.1: seq=2 ttl=128 time=0.926 ms
+--- 192.168.137.1 ping statistics ---
+3 packets transmitted, 3 packets received, 0% loss
+
+/ # ping -c 3 -W 2 8.8.8.8
+PING 8.8.8.8 (8.8.8.8): 56 data bytes
+64 bytes from 8.8.8.8: seq=0 ttl=117 time=6.909 ms
+64 bytes from 8.8.8.8: seq=1 ttl=117 time=10.613 ms
+64 bytes from 8.8.8.8: seq=2 ttl=117 time=10.560 ms
+--- 8.8.8.8 ping statistics ---
+3 packets transmitted, 3 packets received, 0% loss
+
+/ # nslookup example.com
+Server:         192.168.137.1
+Address:        192.168.137.1:53
+Non-authoritative answer:
+Name:   example.com
+Address: 172.66.147.243
+Name:   example.com
+Address: 104.20.23.154
+
+/ # wget -O /tmp/test.html http://example.com && head -4 /tmp/test.html
+Connecting to example.com (172.66.147.243:80)
+saving to '/tmp/test.html'
+test.html            100% |****| 559  0:00:00 ETA
+'/tmp/test.html' saved
+<!doctype html><html lang="en"><head><title>Example Domain</title>...
+(HTML real de example.com descargado)
+
+/ # netstat -rn
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags   MSS Window  irtt Iface
+0.0.0.0         192.168.137.1   0.0.0.0         UG        0 0          0 usb0
+192.168.137.0   0.0.0.0         255.255.255.0   U         0 0          0 usb0
+
+# VEREDICTO: gateway + internet real (ICMP/TCP/DNS/HTTP) + rutas — todo OK.
+# Side-PC: Windows ICS activo (Wi-Fi public -> Ethernet 4 private, 192.168.137.1).
+# Stack: net_ncm.sh con default gw + resolv.conf (fork 284478a).
