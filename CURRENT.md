@@ -70,8 +70,9 @@ e3211b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 
 ## NEXT EXACT ACTION
 
-1. **9-6d continúa**: (a) investigación del overlay azul durante red activa (experimentos de una variable: netdev sin IP / DOWN / renombrado / netns — el disparador correlaciona con netdev activo); (b) modo daemon del stack (navegar menú con red viva, fork); (c) vía celular: compilar USB_USBNET+CDCETHER+RNDIS_HOST como .ko (loader funcional) + consola host-mode + udhcpc.
-2. Luego: 9-6f ADB · 9-6b' DTB · 9-6c' latencia.
+1. **DECISIÓN PENDIENTE (fase D, GO del usuario): firmware AVP propio** para eliminar el overlay azul con red viva — compilar el AVP del SDK sin el trigger, desplegar a `cubegm/avp.uImage` (rollback trivial desde SD; riesgo real = ABI AVP-SDK vs userspace fábrica). ÚNICA vía restante (software agotado: DTS/subclase/serial/netdev-down/video-clear ✗).
+2. Daemon del stack operativo (fork `7508c71`): internet headless OK (telnet/wget sin pantalla) — útil ya mismo.
+3. Paralelo: 9-6d-vía celular (drivers `USB_USBNET`+`CDCETHER`+`RNDIS_HOST` como .ko + host mode + udhcpc) · 9-6f ADB · 9-6b' DTB · 9-6c' latencia.
 2. Recomendación: cosechar evidencia final de la SD (results.log del PASS) al volver la SD al lector.
 3. PARA DESPUÉS (clase D, GO explícito): firmware AVP propio (`~/work/r36sx-hclinux/avp-build/`) — única vía para eliminar el overlay azul; D-2c flash del bootloader propio (staging `1734c340` — riesgo brick documentado).
 4. Post 9-6: decisión de migración 5.15 LTS (feasibility audit read-only primero).
