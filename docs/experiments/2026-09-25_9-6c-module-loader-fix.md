@@ -88,10 +88,56 @@ multiplicación no está afectada).
   96c-ramdump.sh}` + logs cosechados.
 - Logs: `logs/k512-rebuild-96c-0005.log`, `logs/r36sx-v26-k512-build_20260925_*.log`.
 
+## TEST FÍSICO #44 (2026-09-25, kernel `e9d95de9` desplegado) — OOPS ELIMINADO + segundo hallazgo
+
+Boot con el #44 → USB MODE = **MTP PHYSICAL PASS** (bug del stack corregido: shim
+`usb_mtp.sh` vuelto a upstream verbatim, flag `net.mode` retirado — fork `a31d587`)
+→ NETWORK = NCM → test por telnet:
+
+- **`hello.ko`: rc=0** ✓ (regresión OK)
+- **`sha256_generic.ko`: SIN OOPS** — el loader ya no crashea: resuelve
+  `crypto_register_alg` (GPL, tabla sana) y reporta limpio
+  `Unknown symbol sha224_final/sha256_update/sha256_final (err -2)`.
+- **`aes_generic.ko`** (subido por HTTP a /tmp): resuelve `crypto_register_alg/
+  crypto_unregister_alg` pero `Unknown symbol aes_expandkey`.
+
+**Segundo hallazgo (mapa estático de las tablas)**: `crypto_register_alg` es
+**GPL** (tabla `__ksymtab_gpl` — 0x8eec, múltiplo exacto, PERFECTA: 0
+inversiones) → por eso resolvía incluso con el bug. Pero los "unknown"
+`sha256_*`/`aes_expandkey` NO están exportados por ESTE vmlinux (veredicto
+kernel CORRECTO: .ko del build #42 con expectativas de otro config) — PERO la
+inspección reveló el daño residual real: **el entry vendor de 8B quedaba en
+idx~1310 (posición alfabética de "get_adc..."), en MEDIO de `__ksymtab`** →
+desalineaba +4 los ~2260 entries posteriores para el bsearch de paso-12 →
+**todos los símbolos NOT-GPL alfabéticamente ≥ "get_adc" eran invisibles**
+(memcpy idx1922, memset 1945, __kmalloc 221… zona rota).
+
+## Fix 2: `tools/strip_vendor_ksymtab_8B.py` (hook paso 3c de build_kernel.sh)
+
+`objcopy --remove-section` falla (el símbolo `__ksymtab_*` vive en la sección) →
+solución: **`--rename-section ___ksymtab+X = ___ksymtab+zzz_legacy_X`** en los
+.o vendor precompilados → el `SORT(___ksymtab+*)` del vmlinux.lds los deja al
+FINAL de la tabla → los 3,570 entries de 12B quedan contiguos y alineados, y el
+bsearch (`nmemb = floor(size/12)`, fix 0005) nunca lee el tail legacy de 8B.
+Idempotente, integrado al build (re-aplica tras cada re-rsync vendor).
+
+Verificación estática del vmlinux #45 (`e45547a2`): 0 inversiones, entry 8B al
+final (bytes sobrantes `8c 33 3e 80 1b 6e 5d 80`), y **los 6 UND de
+`gf128mul.ko` visibles** (`__kmalloc` 221, `__stack_chk_fail` 344, `memcpy`
+1922, `memset` 1945, `kfree_sensitive` 1772…) → carga `rc=0` garantizada.
+
+## Artefactos (final)
+
+- Kernel #45: `vmlinux.uImage` **`e45547a2`** — BUILD PASS + gates PASS.
+- `patches/buildroot/linux/0005-…` (9005): división /12 → divu (enteros+barrier).
+- `tools/strip_vendor_ksymtab_8B.py` + hook `build_kernel.sh` paso 3c.
+- Fork TreeFrogUI `net-mode-app` `a31d587`: usb_mtp.sh verbatim + net.mode retirado.
+
 ## PENDIENTE (clase F, GO requerido)
 
-1. Deploy: `cubegm/vmlinux.uImage` → `e9d95de9` (backup del `e07844bd` en la SD).
-2. Test físico: boot → NCM → telnet → `insmod sha256_generic.ko` → **sin OOPS,
-   rc=0** + regresión hello.ko + MTP/NET/boot OK → **9-6c PHYSICAL PASS**.
+1. Deploy: `cubegm/vmlinux.uImage` → `e45547a2`.
+2. Test físico final: boot → NETWORK → telnet → `wget gf128mul.ko` (HTTP) +
+   `insmod` → **rc=0, sin OOPS, sin unknowns** + regresión (hello/MTP/boot) →
+   **9-6c PHYSICAL PASS**.
 3. Desbloqueado tras PASS: 9-6d Wi-Fi (carga real de módulos) y arquitectura
    sin workaround built-ins.

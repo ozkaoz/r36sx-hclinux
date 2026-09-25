@@ -106,6 +106,18 @@ if [ -n "$KVER" ] && [ -d "$OWNPATCH" ]; then
   fi
 fi
 
+# 3c. 9-6c: normalizar .o vendor PRECOMPILADOS con ksymtab entries legacy de 8
+# bytes (get_adc_default_val*, rtw_radiotap_fixup): rename de seccion → ordenan al
+# FINAL de __ksymtab (zzz_legacy_*); si no, quedan en mitad de la tabla y
+# desalinean ~2260 entries de 12B para el bsearch de find_exported_symbol (los
+# simbolos NOT-GPL alfabeticamente posteriores se vuelven invisibles →
+# "Unknown symbol" en cualquier insmod). Idempotente; corre tras el rsync vendor
+# del patch step (linux-ext-patch-hichip-driver.mk puede re-inyectar los .o).
+KBUILD="$O/build/linux-$KVER"
+if [ -d "$KBUILD" ]; then
+  python3 "$R/tools/strip_vendor_ksymtab_8B.py" "$KBUILD" || true
+fi
+
 # 4. entorno validado (docs/BUILD.md + TOOLCHAIN_PROVENANCE)
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export BR2_DL_DIR="$W/cache/dl"
