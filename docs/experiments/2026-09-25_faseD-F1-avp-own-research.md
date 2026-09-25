@@ -65,3 +65,18 @@
 - Plan F1b: (1) console=virtuart en bootargs del DTB (captura temprana
   kernel); (2) servicio watchdog del lado AVP; (3) explorar
   `D:\R36SX\hclinux-builds` por el avp-custom; (4) reiterar F1→F2→F3.
+
+---
+
+# ADDENDUM F1b (2026-09-25, segunda parte)
+
+- **CAUSA RAÍZ del reboot-loop identificada**: el WDT del SoC lo feedea el
+  AVP (nuestro kernel Linux tiene `CONFIG_HC_WDT is not set`) y el avp-own
+  96f compiló SIN el driver (`CONFIG_DRV_WDT` not set) → nadie feedea → vence
+  a ~10 s → reboot-loop. Timing consistente con el test físico.
+- **Fix 96g**: `CONFIG_DRV_WDT=y` en el config del avp-build. Regla de
+  proceso del avp-build aprendida: editar `output/.config` → `make
+  syncconfig` (regenera `br2_autoconf.h`; el make incremental NO lo hace
+  solo) → `rm output/build/kernel` → `make`.
+- **avp-own-96g.uImage** = `fa037e15` (1.181.219 B; watchdog.o presente,
+  avp.bin +4.624 B). Pendiente: ciclo físico F1b (boot test con WDT feed).
