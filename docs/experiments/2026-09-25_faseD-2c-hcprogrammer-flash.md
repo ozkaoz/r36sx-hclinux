@@ -47,3 +47,30 @@ staging lo incluye byte-exacto). SIN abrir la consola.
 - **boot-2**: swap de dtb/kernel propios en `/boot/` (validar cada uno).
 - **boot-3**: eliminar `cubegm/` al 100% → objetivo original de Fase D cumplido.
 - Prueba discriminante opcional de quién bootea: logo distinto SOLO en `/boot/`.
+
+---
+
+# ADDENDUM: HCFOTA-own.bin construido a mano (formato decodificado del SDK)
+
+El HCProgrammer rechaza ini con archivos sueltos ("no updater/ddrinfo found
+in firmware") — espera un FIRMWARE HCFOTA empaquetado. El generator.exe del
+SDK es inoperable por CLI (cuelga), así que se decodificó el formato del
+source (`SOURCE/hcfota/hcfota.{c,h}`) y se construyó el paquete propio:
+
+- **Formato**: header 64B (crc, compress_type=0/SIN compresión, version,
+  board, flags de flash) + payload-header 1024B (crc + 6 entries de 32B)
+  + data (ddrinit 12.288 @0x440 · updater 450.488 · **boot 442.368
+  @0x713f8** · eromfs 16.384 · persistent 65.536 · meta 496).
+- **CRC header** = crc32(header con crc=0) + crc32(payload completo) —
+  fórmula de `hcfota_check()`, **validada contra el factory** (reprodujo
+  0x87182d2c exacto).
+- **CRC payload-header** = crc32(payload[64:] con ph.crc=0) — reproducido
+  0xddedec1f del factory.
+- **Construcción**: byte-clon del factory-restore con SOLO la sección boot
+  sustituida por el staging `1734c340` (442.368 B exactos) + version
+  2609250001 + ambos CRC recalculados.
+- **Resultado**: `D:\R36SX\hcprogrammer-own-kit\HCFOTA-own.bin`
+  (988.648 B, sha `495ff9be…`, re-check CRC PASS, boot embebido verificado).
+- Nota: el usuario flasheará "Firmware select" = HCFOTA-own.bin con el
+  mismo flujo probado del 21-09 (HCProgram.exe + HCProgrammer.exe ambos
+  abiertos como admin; BootROM-USB en el encendido; fallback corto 2/4).
