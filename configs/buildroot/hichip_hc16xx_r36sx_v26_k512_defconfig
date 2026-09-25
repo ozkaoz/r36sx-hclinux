@@ -3075,6 +3075,7 @@ BR2_EXTERNAL_FW_COMPRESS_GZIP=y
 # DDR-init de fabrica byte-exacto del dump NOR, DTB desde nuestro DTS)
 BR2_TARGET_HCBOOT=y
 BR2_TARGET_HCBOOT_DEFCONFIG="$(BR2_EXTERNAL_HCLINUX_PATH)/board/hichip/hc16xx/r36sx_v26/r36sx-v26_bl_defconfig"
+BR2_TARGET_HCBOOT_DTS_PATH="$(BR2_EXTERNAL_HCLINUX_PATH)/board/hichip/hc16xx/r36sx_v26/dts/r36sx-v26-bl-nordtb.dts"
 
 #
 # Extra Linux Configuration

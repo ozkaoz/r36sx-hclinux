@@ -81,15 +81,3 @@ CONFIG_PPP_ASYNC=y
 CONFIG_PPP_DEFLATE=y
 CONFIG_SLIP=y
 
-# fase D-F1b-TEST (2026-09-25): kernel SIN canal kernel<->AVP para aislar el
-# hang temprano del boot con el avp-own (el kernel muere pre-S09trace con el
-# avp-own 96f/96g; con el golden arranca OK). Desactivando amprpc/avp-proxy/
-# virtuart/kshm, el kernel no habla con el AVP: si llega al menu, el asesino
-# es el handshake RPC (y el reset probablemente un crash del HCRTOS del
-# avp-own al recibir el primer mensaje). Kernel de TEST — no produccion
-# (sin audio/video/wdt-feed... el AVP-own feedea su propio wdt).
-# CONFIG_HC_AMPRPC is not set
-# CONFIG_HC_AVPPROXY is not set
-# CONFIG_HC_VIRTUART is not set
-# CONFIG_HC_KSHM is not set
-# CONFIG_HC_MMZ is not set
