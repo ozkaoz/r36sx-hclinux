@@ -1,0 +1,18 @@
+--- a/components/kernel/source/include/uapi/hcuapi/auddec.h
++++ b/components/kernel/source/include/uapi/hcuapi/auddec.h
+@@ -93,6 +93,15 @@
+ 	/* 0:master_mode; 1:slave_mode; default is master_mode */
+ 	int slave_mode;
+ 
++	/*
++	 * 9l FIX (AVP-side): padding 24 bytes para matchear ABI Dic-2025 del
++	 * driver_r36sx.so. El SDK Jul-2024 compila sizeof=608
++	 * (AUDDEC_INIT=0x82600301); el driver de fabrica Dic-2025 envia
++	 * sizeof=632 (AUDDEC_INIT=0x82780301). Sin este padding el comando
++	 * no matchea en el RPC dispatch del AVP -> audio muerto.
++	 */
++	uint8_t _pad_abi_2025[24];
++
+ } __attribute__((aligned(8)));
+ 
+ /*! @struct audio_decore_status

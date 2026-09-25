@@ -1,0 +1,18 @@
+--- a/components/kernel/source/include/uapi/hcuapi/vidmp.h
++++ b/components/kernel/source/include/uapi/hcuapi/vidmp.h
+@@ -192,6 +192,15 @@
+ 	int             buffering_start;
+ 	int             buffering_end;
+ 	jpg_scan_type_e scan_type;
++
++	/*
++	 * 9m FIX (AVP-side): padding 20 bytes para matchear ABI Dic-2025 del
++	 * driver_r36sx.so/libffplayer. El SDK Jul-2024 compila sizeof=644
++	 * (VIDDEC_INIT=0x82840400); el userspace de fabrica Dic-2025 envia
++	 * sizeof=664 (VIDDEC_INIT=0x82980400). Sin este padding el comando
++	 * no matchea en el RPC dispatch del AVP -> video sin imagen.
++	 */
++	unsigned char   _pad_abi_2025[20];
+ }__attribute__((aligned(4)));
+ 
+ struct vdec_decore_status {
