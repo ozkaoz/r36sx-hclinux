@@ -1,6 +1,6 @@
 # CURRENT.md — Operational Snapshot (CACHE — Git is the truth)
 
-**Updated:** 2026-09-24 (9-6e CERRADO con limitación: NCM producción, ADR-015)
+**Updated:** 2026-09-25 (9-6e CERRADO con limitación: NCM producción, ADR-015; stack NCM desplegado a SD, read-back PASS)
 **Rule:** small snapshot, no history. No changelog.
 
 ## PROJECT
@@ -57,7 +57,7 @@ HEAD = commit de cierre 9-6e-PPP (ADR-015 + refutación serial) — caché; vali
 
 ## PHYSICAL STATUS
 
-CONSOLA OPERATIVA: NOR de fábrica + kernel 5.12.4 `e07844bd` + rootfs propio + TreeFrogUI. MTP PHYSICAL PASS · networking NCM PHYSICAL PASS con overlay azul (limitación aceptada, ADR-015) · ACM serial sin azul. Stack desplegado en SD = dispatcher pre-NCM (default PPP de la iteración refutada) — **deploy del dispatcher NCM (`66a3cbe`) PENDIENTE de GO (clase F)**.
+CONSOLA OPERATIVA: NOR de fábrica + kernel 5.12.4 `e07844bd` + rootfs propio + TreeFrogUI. MTP PHYSICAL PASS · networking NCM PHYSICAL PASS con overlay azul (limitación aceptada, ADR-015) · ACM serial sin azul. **Stack NCM desplegado en SD (2026-09-25, fork `66a3cbe`, read-back PASS)**: dispatcher default NCM + `net_ppp.sh` experimental + shim `usb_mtp.sh`. Test físico de producción PENDIENTE (usuario): activar NETWORK → NCM → adaptador de red + `telnet 192.168.137.2` (azul esperado y aceptado).
 
 ## SOURCE SDK SHA256
 
@@ -69,7 +69,7 @@ e3211b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 
 ## NEXT EXACT ACTION
 
-1. **(clase F — requiere GO)** Deploy del stack NCM a la SD: `apps/net_mode` del fork (`66a3cbe`) → `treefrog/` de la SD (net_mode.sh + net_ppp.sh + usb_mtp.sh shim). Luego test físico: activar NETWORK → NCM → adaptador de red + `telnet 192.168.137.2` (azul esperado y aceptado).
+1. **Test físico (usuario) de la sesión de red de PRODUCCIÓN:** expulsar la SD del lector → arrancar consola → activar NETWORK → verificar adaptador de red NCM en Windows + `telnet 192.168.137.2` → root (azul esperado y aceptado, ADR-015) → B → apagar.
 2. Luego: elegir **9-6f ADB (FunctionFS)** o **9-6c fix del module loader**.
 3. PARA DESPUÉS (clase D, GO explícito): firmware AVP propio (`~/work/r36sx-hclinux/avp-build/`) — única vía para eliminar el overlay azul.
 
