@@ -87,3 +87,28 @@ Flash v3 (mismo protocolo HCProgrammer). Con boot-1 PASS -> boot-2
 (kernels propios en /boot/) -> boot-3 (cubegm/ eliminado 100%). La linea
 hcboot-SDK-compilado queda como investigacion posterior (por que no
 inicializa panel — diff configs/codigo contra el factory-decompressed).
+
+---
+
+# BOOT-1 PASS (2026-09-25) — FASE D: el boot de la R36SX está bajo nuestro control
+
+**Resultado físico del usuario:** flasheó `HCFOTA-own-v3.bin` → arranca
+correctamente al menú TreeFrogUI y es funcional.
+
+## Qué corrió en este boot
+
+- Bootloader = **fábrica + 7 bytes** (path-prefix `cubegm\0`→`boot\0\0\0`
+  dentro del payload LZMA recomprimido con parámetros exactos del factory).
+- NOR-DTB = fábrica byte-exacto (solo el string del path-prefix).
+- Boot files desde `/boot/` (contenido = copia byte-exacto de cubegm/,
+  cero variables nuevas).
+- DDR-init = fábrica byte-exacto → ventana BootROM-USB activa siempre
+  (recovery sin abrir la consola).
+
+## Pendiente
+
+- **boot-2 (prueba discriminante)**: renombrar `cubegm/` → si sigue
+  funcionando, confirmado que lee `/boot/` exclusivamente.
+- **boot-3**: eliminar `cubegm/` al 100% → **FASE D COMPLETA**.
+- La línea hcboot-SDK-compilado (pantalla negra) queda como investigación
+  posterior documentada.
