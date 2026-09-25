@@ -70,7 +70,7 @@ e3211b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 
 ## NEXT EXACT ACTION
 
-1. **DECISIÓN PENDIENTE (fase D, GO del usuario): firmware AVP propio** para eliminar el overlay azul con red viva — compilar el AVP del SDK sin el trigger, desplegar a `cubegm/avp.uImage` (rollback trivial desde SD; riesgo real = ABI AVP-SDK vs userspace fábrica). ÚNICA vía restante (software agotado: DTS/subclase/serial/netdev-down/video-clear ✗).
+1. **Fase D PAUSADA**: el avp-own (SDK) no arranca ni siquiera solo (test sin kernel: reboot-loop) → investigación pendiente del boot-flow del avp.uImage por el bootloader (¿formato/validación custom del avp-custom de fábrica?). Artefactos preservados. CONSOLA: known-good restaurado (kernel `e45547a2` + AVP golden `a9788995`).
 2. Daemon del stack operativo (fork `7508c71`): internet headless OK (telnet/wget sin pantalla) — útil ya mismo.
 3. Paralelo: 9-6d-vía celular (drivers `USB_USBNET`+`CDCETHER`+`RNDIS_HOST` como .ko + host mode + udhcpc) · 9-6f ADB · 9-6b' DTB · 9-6c' latencia.
 2. Recomendación: cosechar evidencia final de la SD (results.log del PASS) al volver la SD al lector.

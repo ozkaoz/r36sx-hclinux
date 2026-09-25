@@ -80,3 +80,28 @@
   solo) → `rm output/build/kernel` → `make`.
 - **avp-own-96g.uImage** = `fa037e15` (1.181.219 B; watchdog.o presente,
   avp.bin +4.624 B). Pendiente: ciclo físico F1b (boot test con WDT feed).
+
+---
+
+# ADDENDUM F1b-RESULT (2026-09-25, cierre de sesión)
+
+- **Kernel-test sin canal AVP: NO VIABLE** — el hcfb (framebuffer del menú)
+  depende de mmz + avp-proxy (mmz_memalign / avp_work_notifier_*): sin el
+  canal no hay fb. Vía descartada.
+- **Test solo-AVP (kernel fuera del boot): REBOOT-LOOP IGUAL** → el avp-own
+  (96g, con CONFIG_DRV_WDT=y) **ni siquiera arranca sin kernel** → el
+  problema es fundamental del boot del avp-own: el bootloader de fábrica
+  no lo acepta/arranca, o muere al inicio. Pendiente: entender el flujo de
+  carga del avp.uImage por el bootloader (¿validación? ¿formato custom del
+  avp-custom? ¿entry/ddr-init-dependencia?).
+- **Consola restaurada a known-good**: kernel `e45547a2` + AVP golden
+  `a9788995` + dtb `116ddf26` (verificado). Fase D: PAUSADA como
+  investigación del boot-AVP (los artefactos avp-own 9b/9e/96f/96g quedan
+  preservados en avp-build/output/images).
+- **Limpieza de disco (petición del usuario)**: liberados ~38 GB dentro del
+  VHDX de WSL (D:\WSL\Ubuntu-24.04): builds 4.4.186 (r36sx-v26, superseado),
+  baseline d3100-v20 (regenerable), KERNEL_BUILD pre-proyecto (19 GB,
+  SDK duplicado), patch-audit interno (regenerable), avp-build build+staging
+  (regenerable), mtp_kernel (pre-eliminación). Conservados: k512 (activo),
+  SDK maestro, artifacts, avp-build/images. Compactación física del VHDX:
+  pendiente (requiere fstrim sudo + diskpart elevado; opcional).
