@@ -2028,7 +2028,9 @@ BR2_PACKAGE_MONGREL2_LIBC_SUPPORTS=y
 # BR2_PACKAGE_PIMD is not set
 # BR2_PACKAGE_PIXIEWPS is not set
 # BR2_PACKAGE_POUND is not set
-# BR2_PACKAGE_PPPD is not set
+# 9-6e: pppd/chat para PPP experimental sobre CDC-ACM (refutado como evasion del
+# overlay azul — ADR-015; retenido: el kernel desplegado e07844bd lo incluye)
+BR2_PACKAGE_PPPD=y
 # BR2_PACKAGE_PPTP_LINUX is not set
 # BR2_PACKAGE_PRIVOXY is not set
 # BR2_PACKAGE_PROFTPD is not set

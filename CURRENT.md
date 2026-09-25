@@ -1,6 +1,6 @@
 # CURRENT.md — Operational Snapshot (CACHE — Git is the truth)
 
-**Updated:** 2026-09-24 (9-6e: red USB + overlay AVP; consolidación de documentación y del stack)
+**Updated:** 2026-09-24 (9-6e CERRADO con limitación: NCM producción, ADR-015)
 **Rule:** small snapshot, no history. No changelog.
 
 ## PROJECT
@@ -11,16 +11,14 @@ r36sx-hclinux — reproducible Linux/HClinux platform for HiChip consoles (HC16x
 
 **Fase 9-6 — kernel 5.12.4 a máximo desarrollo.**
 
-Trabajo FUERA del árbol git (Scripts del stack) vive en el fork TreeFrogUI (`D:\GitHub\TreeFrogUI`, branch **`net-mode-app`**, commit `d9ef355`) — ver AGENTS §15.
+Trabajo FUERA del árbol git (scripts del stack) vive en el fork TreeFrogUI (`D:\GitHub\TreeFrogUI`, branch **`net-mode-app`**, commit `66a3cbe`) — ver AGENTS §15.
 
-### 9-6e — USB NETWORKING (EN CURSO)
+### 9-6e — USB NETWORKING: CERRADO con limitación (ADR-015)
 
-- **MTP**: PHYSICAL PASS (Windows detecta "TreeFrogUI MTP" + transferencia) — sin `net.mode` en la SD.
-- **NCM** (`ncm.mode`): Windows detecta la consola como ADAPTADOR DE RED (CDC-NCM nativo) + `telnet 192.168.137.2` → root. **PERO dispara el overlay azul del AVP.**
-- **CDC-ACM serial** (`net_serial.sh`): shell por COM, **sin pantalla azul** → el AVP reacciona al *network gadget*.
-- **Overlay azul**: comportamiento del firmware AVP (fb con relleno uniforme `06 f2`; NO es corrupción DMA — el 9106 está en dead code). El kernel sigue vivo bajo el azul (telnet + red funcionan).
-- **v15** (`2fe467e`): fix por DTS — `usb0 status="disabled"` en `/hcrtos/`. Desplegado (`fd4f0d0e` + dtb `116ddf26`) y **TEST FÍSICO 2026-09-24: REFUTADO** — con NCM, adaptador de red OK ~30 s y luego overlay azul; tras B queda una capa azul persistente sobre el menú.
-- **v16 ECM** (subclase 06, misma familia que ACM probada sin azul, con netdev): kernel `7d87d15c` **compilado (build #42, 2026-09-24 12:19), NO desplegado**. `net_mode.sh` default = ECM (`ncm.mode` → NCM).
+- **Producción = NCM** (adaptador de red nativo Windows + `telnet 192.168.137.2` → root). Networking **PHYSICAL PASS** (bajo el azul).
+- **Overlay azul del AVP = limitación aceptada, display-only**: lo dispara CUALQUIER networking activo — gadget CDC-network (NCM/ECM/RNDIS) y TAMBIÉN PPP sobre CDC-ACM (refutado 2026-09-24, incluso con LCP sin respuesta). Kernel/red/shell siguen vivos debajo; capa residual tras B hasta reboot. Vías de evitación AGOTADAS del lado kernel/DTS: DTS `usb0 disabled` (v15) ✗ · subclase CDC ✗ · serial-ACM networking ✗. Eliminarlo exige **firmware AVP propio → PARCADO (clase D)**.
+- ACM serial puro (shell interactivo, sin pppd) NO dispara azul — queda como transporte auxiliar.
+- PPP/SLIP del kernel + pppd del rootfs: retenidos experimentales (kernel desplegado los incluye).
 
 ### Resto de 9-6
 
@@ -28,56 +26,51 @@ Trabajo FUERA del árbol git (Scripts del stack) vive en el fork TreeFrogUI (`D:
 |---|---|---|
 | 9-6a | Port MUSB/USB (host) | ✅ host PHYSICAL PASS |
 | 9-6b | USB Mode MTP gadget | ✅ PHYSICAL PASS (kernel `fdd1d7cc`; MTP `69f247dc`) |
-| 9-6c | Module loader (`resolve_symbol` OOPS) | ⏳ PENDIENTE (workaround: built-ins) |
+| 9-6c | Module loader (`resolve_symbol` OOPS) | ⏳ PENDIENTE (workaround: built-ins) — bloquea 9-6d |
 | 9-6b' | Reconciliación DTB (SD-proven vs build) | ⏳ PENDIENTE |
 | 9-6c' | Latencia de display (5.12 ~10s vs 4.4 8s) | ⏳ PENDIENTE |
 | 9-6d | Wi-Fi | ⏳ PENDIENTE (depende 9-6c) |
-| 9-6e | Red USB / overlay AVP | ⏳ EN CURSO |
+| 9-6e | Red USB / overlay AVP | ✅ CERRADO con limitación (NCM producción, ADR-015) |
 | 9-6f | ADB (FunctionFS) | ⏳ PENDIENTE |
 
 ## CURRENT HEAD
 
-`2fe467e` (v15) — caché; validar con `git log -1`.
+HEAD = commit de cierre 9-6e-PPP (ADR-015 + refutación serial) — caché; validar con `git log -1`.
 
 ## KNOWN-GOOD STATE
 
 - NOR = FACTORY (stock bootloader, NOT replaceable — 2 bricks).
-- SD = kernel 5.12.4 `fd4f0d0e` (v15) + `dtb.bin` `116ddf26` + rootfs propio + TreeFrogUI.
+- SD = kernel 5.12.4 `e07844bd` (8.271.323 B; NCM/ECM/ACM/RNDIS + PPP/SLIP built-in, `usb0 disabled` en DTS) + `dtb.bin` `116ddf26` + rootfs propio (con pppd) + TreeFrogUI. Backup pre-PPP en SD: `cubegm/vmlinux.uImage.preppp.bak` (6.886.264 B).
+- `avp.uImage` SD == golden fábrica `a9788995` (verificado 2026-09-24).
 - Backup known-good MTP: `D:/R36SX/sd-full-backups/2026-09-23_mtp-knowngood/` (hash-verified).
-- Rollback físico de USB Mode: MTP PHYSICAL PASS ×2.
 - cubegm/ = contrato NOR de 4 archivos + `diag.enabled`.
 - Rollback de kernel: goldens stock preservados (uImage `53b3e0b3`, dtb `1258f1eb`, avp `a9788995`).
+- Flags SD raíz: `net.mode` presente → la próxima activación USB MODE entra en modo red (dispatcher nuevo → NCM).
 
 ## BUILD STATUS
 
-- **KERNEL 5.12.4 k512 (ECM)**: BUILD PASS → `7d87d15c` (ECM/NCM/ACM/RNDIS=y, `usb0 disabled`). **Pendiente deploy.**
-- **KERNEL 5.12.4 k512 (v15)**: desplegado (`fd4f0d0e`).
-- **ROOTFS**: embed determinista (v6 flow). Gates TOOLCHAIN/PATCH PASS.
+- **KERNEL 5.12.4 k512 (PPP)**: BUILD PASS → `e07844bd` **DESPLEGADO** (build #43; NCM/ECM/ACM/RNDIS=y + PPP/SLIP=y, `usb0 disabled`).
+- **KERNEL 5.12.4 k512 (ECM)**: `7d87d15c` compilado, NO desplegado — premisa refutada (rama muerta, archivada).
+- **ROOTFS**: embed determinista (v6 flow) + pppd/chat (experimental retenido, ADR-015). Gates TOOLCHAIN/PATCH PASS.
 - **KERNEL 4.4.186**: superseado; buildable (deprecación pendiente).
 - **BOOTLOADER**: NO reemplazable.
 
 ## PHYSICAL STATUS
 
-CONSOLA OPERATIVA: NOR de fábrica + kernel 5.12.4 + rootfs propio + TreeFrogUI (MTP + red + shell remoto; overlay azul pendiente bajo networking).
+CONSOLA OPERATIVA: NOR de fábrica + kernel 5.12.4 `e07844bd` + rootfs propio + TreeFrogUI. MTP PHYSICAL PASS · networking NCM PHYSICAL PASS con overlay azul (limitación aceptada, ADR-015) · ACM serial sin azul. Stack desplegado en SD = dispatcher pre-NCM (default PPP de la iteración refutada) — **deploy del dispatcher NCM (`66a3cbe`) PENDIENTE de GO (clase F)**.
 
 ## SOURCE SDK SHA256
 
-e321b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
+e3211b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 
 ## ACTIVE BLOCKERS
 
-- **9-6e**: overlay azul del AVP con gadget de red (display-only).
-- **9-6c**: module loader del kernel 5.12 (OOPS `resolve_symbol`).
+- **9-6c**: module loader del kernel 5.12 (OOPS `resolve_symbol`) — workaround: built-ins.
 
 ## NEXT EXACT ACTION
 
-**9-6e: aislar el disparador del overlay azul** (evidencia 2026-09-24: es el network gadget `netdev`/`u_ether`, stateful en el AVP; v15 DTS refutado). Opciones de una variable, en orden:
-(a) **presencia vs tráfico**: bindear NCM y NO conectar el PC — ¿azul igual? (sin tocar kernel);
-(b) **subclase CDC**: desplegar kernel ECM `7d87d15c` y test;
-(c) **controlador**: bindear el gadget a `musb-hdrc.1.auto` (usb@18850000) en vez de usb0.
-Luego, lo de antes:
-1. Copiar `~/work/r36sx-hclinux/build/r36sx-v26-k512/images/vmlinux.uImage` → `cubegm/vmlinux.uImage` (dtb `116ddf26` ya desplegado). Backup del uImage actual.
-2. En la consola: crear flag `net.mode` en la raíz SD → conectar USB → verificar adaptador de red en Windows + `telnet 192.168.137.2` **sin overlay azul**.
-3. Si PASS: promover ECM + actualizar CURRENT/CHANGELOG/ROADMAP a PHYSICAL PASS. Si azul: el discriminante es `netdev`/u_ether, no la subclase → volver a ACM serial como transporte de producción.
+1. **(clase F — requiere GO)** Deploy del stack NCM a la SD: `apps/net_mode` del fork (`66a3cbe`) → `treefrog/` de la SD (net_mode.sh + net_ppp.sh + usb_mtp.sh shim). Luego test físico: activar NETWORK → NCM → adaptador de red + `telnet 192.168.137.2` (azul esperado y aceptado).
+2. Luego: elegir **9-6f ADB (FunctionFS)** o **9-6c fix del module loader**.
+3. PARA DESPUÉS (clase D, GO explícito): firmware AVP propio (`~/work/r36sx-hclinux/avp-build/`) — única vía para eliminar el overlay azul.
 
-Detalle y artefactos: `docs/experiments/2026-09-24_usb-networking-blue-overlay.md`.
+Detalle: `docs/experiments/2026-09-24_9-6e-ppp-slip.md` y `2026-09-24_usb-networking-blue-overlay.md` (+ addendum refutación PPP).

@@ -92,3 +92,22 @@ Procedimiento: SD con flags `net.mode` + `ncm.mode`, kernel desplegado `fd4f0d0e
 - `2fe467e` v15 (DTS usb0 disabled) · `3098886` v13 (ACM) · `eacecb4` (revocación
   DMA) · `fd0f840` v9 (9106, dead code) · `5a0e6c7` v8 (9105)
 - Fork TreeFrogUI `net-mode-app` `d9ef355` (apps/net_mode + dispatcher)
+
+## ADDENDUM 2026-09-24 (noche) — refutación PPP: el disparador es networking ACTIVO, no el gadget
+
+Test adicional (una variable): PPP sobre CDC-ACM (kernel `e07844bd` con
+`CONFIG_PPP/SLIP=y` + pppd embebido + `net_ppp.sh` del fork). El gadget es clase
+modem — sin descriptor de red, sin netdev de u_ether. pppd corrió sobre
+`/dev/ttyGS0` con LCP enviado ×10 **sin respuesta del PC** (dial-up no
+configurado; ver `PPP_DEBUG.log`) — **y el overlay azul apareció igual**
+(reporte físico del usuario).
+
+- La "Conclusión" de arriba queda **corregida**: el disparador NO es la
+  presencia del network gadget (`netdev`/`u_ether`) — es **networking activo en
+  cualquiera de sus formas** (gadget CDC-network o pppd sobre ACM). El ACM puro
+  (shell, sin pppd) sigue sin dispararlo.
+- Matiz: no se excluye del log una contaminación stateful de la sesión NCM
+  previa del mismo día; la observación en vivo del usuario manda (EVIDENCE > MEMORY).
+- Los "Próximos pasos" 1–4 de arriba quedan **muertos**: ECM no se despliega
+  (premisa refutada); producción = NCM. Ver **ADR-015** y
+  `docs/experiments/2026-09-24_9-6e-ppp-slip.md`.

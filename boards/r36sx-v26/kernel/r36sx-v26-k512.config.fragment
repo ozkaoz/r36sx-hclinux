@@ -70,3 +70,13 @@ CONFIG_HC_INPUT=y
 CONFIG_HC_INPUT_GPIO=y
 CONFIG_HC_GPIO_KEY=y
 CONFIG_HC_SPI=y
+
+# 9-6e (2026-09-24): PPP/SLIP sobre CDC-ACM — RETENIDO EXPERIMENTAL.
+# Refutado fisicamente: la sesion PPP TAMBIEN dispara el overlay azul del AVP
+# (networking ACTIVO en general lo dispara; ACM puro sin pppd no). Ver ADR-015
+# y docs/experiments/2026-09-24_9-6e-ppp-slip.md. El kernel desplegado e07844bd
+# incluye estas opciones; inofensivas sin uso. Produccion: NCM.
+CONFIG_PPP=y
+CONFIG_PPP_ASYNC=y
+CONFIG_PPP_DEFLATE=y
+CONFIG_SLIP=y
