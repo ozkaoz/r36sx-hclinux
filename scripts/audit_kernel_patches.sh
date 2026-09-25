@@ -111,16 +111,17 @@ NP4=$(find "$P4" -maxdepth 1 -name '*.patch' ! -name '9*' 2>/dev/null | wc -l)
 NS9=$(find "$P4" -maxdepth 1 -name '900*.patch' 2>/dev/null | wc -l)
 NV9=$(find "$P4" -maxdepth 1 -name '910*.patch' 2>/dev/null | wc -l)
 NPOWN=$(find "$OWN" -maxdepth 1 -name '*.patch' 2>/dev/null | wc -l)
-[ "$NPOWN" -eq 4 ] && ok "set repo patches/buildroot/linux = 4 patches (genericos)" || bad "set repo genericos = $NPOWN (esperado 4)"
+# 9-6c (2026-09-25): 5 genericos — 0001-0004 (ADR-012/013) + 0005 module-loader magic-div fix
+[ "$NPOWN" -eq 5 ] && ok "set repo patches/buildroot/linux = 5 patches (genericos)" || bad "set repo genericos = $NPOWN (esperado 5)"
 OWNVER="$PROJ/patches/buildroot/linux-$KVER"
 NVOWN=$(find "$OWNVER" -maxdepth 1 -name '*.patch' 2>/dev/null | wc -l)
 NVEXP=1
 [ "$KVER" = "5.12.4" ] && NVEXP=6
 [ "$NVOWN" -eq "$NVEXP" ] && ok "set repo patches/buildroot/linux-$KVER = $NVOWN patch (versionado, esperado $NVEXP)" || bad "set repo versionado linux-$KVER = $NVOWN (esperado $NVEXP)"
-[ "$NS9" -eq 4 ] && ok "SDK sincronizado: 4 patches propios 900X-*.patch en linux-$KVER" \
+[ "$NS9" -eq 5 ] && ok "SDK sincronizado: 5 patches propios 900X-*.patch en linux-$KVER" \
   || { [ "$NS9" -eq 0 ] && echo "  [INFO] SDK linux-$KVER sin 900X aún (build_kernel.sh no corrido para esta versión; árbol verificado arriba)" \
-       || bad "SDK linux-$KVER 900X = $NS9 (esperado 0 o 4)"; }
-if [ "$NS9" -eq 4 ] && [ "$NPOWN" -eq 4 ]; then
+       || bad "SDK linux-$KVER 900X = $NS9 (esperado 0 o 5)"; }
+if [ "$NS9" -eq 5 ] && [ "$NPOWN" -eq 5 ]; then
   DH=$(diff <(cat "$OWN"/*.patch | sha256sum) <(cat "$P4"/900*.patch | sha256sum))
   [ -z "$DH" ] && ok "900X en SDK == copias repo (hash idéntico)" || bad "900X en SDK difieren del repo"
 fi

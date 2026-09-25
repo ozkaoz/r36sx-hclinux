@@ -26,7 +26,7 @@ Trabajo FUERA del árbol git (scripts del stack) vive en el fork TreeFrogUI (`D:
 |---|---|---|
 | 9-6a | Port MUSB/USB (host) | ✅ host PHYSICAL PASS |
 | 9-6b | USB Mode MTP gadget | ✅ PHYSICAL PASS (kernel `fdd1d7cc`; MTP `69f247dc`) |
-| 9-6c | Module loader (`resolve_symbol` OOPS) | ⏳ PENDIENTE (workaround: built-ins) — bloquea 9-6d |
+| 9-6c | Module loader (`resolve_symbol` OOPS) | 🔧 FIX LISTO: causa raíz cazada (gcc magic-div /12 + entries vendor 8B); kernel #44 `e9d95de9` BUILD PASS — **deploy+test físico PENDIENTE** (desbloquea 9-6d) |
 | 9-6b' | Reconciliación DTB (SD-proven vs build) | ⏳ PENDIENTE |
 | 9-6c' | Latencia de display (5.12 ~10s vs 4.4 8s) | ⏳ PENDIENTE |
 | 9-6d | Wi-Fi | ⏳ PENDIENTE (depende 9-6c) |
@@ -49,7 +49,8 @@ HEAD = commit de cierre 9-6e-PPP (ADR-015 + refutación serial) — caché; vali
 
 ## BUILD STATUS
 
-- **KERNEL 5.12.4 k512 (PPP)**: BUILD PASS → `e07844bd` **DESPLEGADO** (build #43; NCM/ECM/ACM/RNDIS=y + PPP/SLIP=y, `usb0 disabled`).
+- **KERNEL 5.12.4 k512 #44 (fix 9-6c, parche 0005/9005)**: BUILD PASS → **`e9d95de9`** (8.270.741 B, 2026-09-25 11:01) — **DEPLOY PENDIENTE de GO**. Gates TOOLCHAIN+PATCH PASS (audit v5 genéricos).
+- **KERNEL 5.12.4 k512 #43 (PPP)**: BUILD PASS → `e07844bd` **DESPLEGADO** (NCM/ECM/ACM/RNDIS=y + PPP/SLIP=y, `usb0 disabled`).
 - **KERNEL 5.12.4 k512 (ECM)**: `7d87d15c` compilado, NO desplegado — premisa refutada (rama muerta, archivada).
 - **ROOTFS**: embed determinista (v6 flow) + pppd/chat (experimental retenido, ADR-015). Gates TOOLCHAIN/PATCH PASS.
 - **KERNEL 4.4.186**: superseado; buildable (deprecación pendiente).
@@ -65,12 +66,13 @@ e3211b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 
 ## ACTIVE BLOCKERS
 
-- **9-6c**: module loader del kernel 5.12 (OOPS `resolve_symbol`) — workaround: built-ins.
+- **9-6c → EN VERIFICACIÓN FÍSICA**: fix compilado (kernel #44 `e9d95de9`, parche 0005/9005) — deploy+insmod test PENDIENTE de GO. Hasta PASS: workaround built-ins sigue vigente.
 
 ## NEXT EXACT ACTION
 
-1. Elegir siguiente punto de desarrollo (ver mapa en ROADMAP): **9-6c module loader** (recomendado — desbloquea 9-6d wifi) · 9-6f ADB · 9-6b' reconciliación DTB · 9-6c' latencia display.
-2. PARA DESPUÉS (clase D, GO explícito): firmware AVP propio (`~/work/r36sx-hclinux/avp-build/`) — única vía para eliminar el overlay azul; D-2c flash del bootloader propio (staging `1734c340`, dual-path inbrickeable — riesgo brick documentado).
-3. Post 9-6: decisión de migración 5.15 LTS (feasibility audit read-only primero).
+1. **(clase F — requiere GO)** Deploy del kernel #44 `e9d95de9` a `cubegm/vmlinux.uImage` (backup del `e07844bd` en la SD). Luego test físico: boot → NCM → telnet → `sh /mnt/sdcard/96c-test/96c-test.sh` → insmod sha256 **rc=0 sin OOPS** + regresión (MTP/NET/menú) → **9-6c PHYSICAL PASS** (desbloquea 9-6d Wi-Fi).
+2. Tras PASS: elegir 9-6d Wi-Fi / 9-6f ADB / 9-6b' DTB / 9-6c' latencia.
+3. PARA DESPUÉS (clase D, GO explícito): firmware AVP propio (`~/work/r36sx-hclinux/avp-build/`) — única vía para eliminar el overlay azul; D-2c flash del bootloader propio (staging `1734c340` — riesgo brick documentado).
+4. Post 9-6: decisión de migración 5.15 LTS (feasibility audit read-only primero).
 
-Detalle: `docs/experiments/2026-09-24_9-6e-ppp-slip.md` y `2026-09-24_usb-networking-blue-overlay.md` (+ addendum refutación PPP).
+Detalle 9-6c: `docs/experiments/2026-09-25_9-6c-module-loader-fix.md`. 9-6e: `docs/experiments/2026-09-24_9-6e-ppp-slip.md` y `2026-09-24_usb-networking-blue-overlay.md`.
