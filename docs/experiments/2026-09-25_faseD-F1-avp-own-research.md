@@ -50,3 +50,18 @@
 - `avp-build/output/images/avp-own-96f.uImage` (be57d381) + `avp.bin` (2.158.144 B).
 - Nota de proceso: el make incremental del avp-build NO propaga cambios de
   headers → rebuilds con `rm -rf output/{build,staging}` (config resguardado).
+
+---
+
+# ADDENDUM F1 RESULT (cierre 2026-09-25)
+
+- Boot físico con avp-own-96f (`a02681a9`): **AVP-own ARRANCÓ** (consola
+  virtuart viva `hc1600a@dbE3100v20#`, panel DTS leído 640x480, display_init,
+  audio `CFG 48K`, último print `rgb: ff0000ff` = display-clear AZUL — la
+  firma del overlay). Kernel muere pre-S09trace → **reboot-loop** (candidato:
+  watchdog de la cadena kernel/hcdaemon↔AVP sin servicio en el avp-own).
+- **Rollback ejecutado**: `cubegm/avp.uImage` = golden `a9788995`; kernel
+  `e45547a2` y dtb `116ddf26` intactos. Consola known-good.
+- Plan F1b: (1) console=virtuart en bootargs del DTB (captura temprana
+  kernel); (2) servicio watchdog del lado AVP; (3) explorar
+  `D:\R36SX\hclinux-builds` por el avp-custom; (4) reiterar F1→F2→F3.
