@@ -141,3 +141,22 @@ final (bytes sobrantes `8c 33 3e 80 1b 6e 5d 80`), y **los 6 UND de
    **9-6c PHYSICAL PASS**.
 3. Desbloqueado tras PASS: 9-6d Wi-Fi (carga real de módulos) y arquitectura
    sin workaround built-ins.
+
+## TEST FÍSICO FINAL #45 (2026-09-25) — **9-6c PHYSICAL PASS ✅**
+
+Kernel `e45547a2` desplegado (backup `e07844bd` en SD). Boot → NETWORK →
+test por telnet (kernel "#13 PREEMPT Fri Sep 25 12:05:00"):
+
+- **`gf128mul.ko` (6 UND reales: `memcpy`/`memset`/`__kmalloc`/
+  `kfree_sensitive`/`__stack_chk_*` — todos de la zona antes desalineada):
+  `insmod` → **RC=0**, `/proc/modules` → `gf128mul 5120 - - Live`** —
+  módulo cargado y vivo.**
+- `hello.ko`: rc=0 (regresión).
+- `sha256_generic.ko`: SIN OOPS; "Unknown symbol sha256_*/sha224_* (err -2)"
+  = veredicto correcto (esos símbolos no los exporta este vmlinux).
+- dmesg limpio; sin OOPS en ninguna prueba.
+
+**9-6c CERRADO**: el module loader del kernel 5.12.4 funciona de punta a
+punta (fix doble: 0005 división /12 → divu + strip_vendor_ksymtab_8B
+alineación de tabla). Desbloqueado: 9-6d Wi-Fi y arquitectura sin
+workaround built-ins.

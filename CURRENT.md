@@ -26,7 +26,7 @@ Trabajo FUERA del árbol git (scripts del stack) vive en el fork TreeFrogUI (`D:
 |---|---|---|
 | 9-6a | Port MUSB/USB (host) | ✅ host PHYSICAL PASS |
 | 9-6b | USB Mode MTP gadget | ✅ PHYSICAL PASS (kernel `fdd1d7cc`; MTP `69f247dc`) |
-| 9-6c | Module loader (`resolve_symbol` OOPS) | 🔧 FIX LISTO: causa raíz cazada (gcc magic-div /12 + entries vendor 8B); kernel #44 `e9d95de9` BUILD PASS — **deploy+test físico PENDIENTE** (desbloquea 9-6d) |
+| 9-6c | Module loader (`resolve_symbol` OOPS) | ✅ **DONE — PHYSICAL PASS** (2026-09-25, kernel `e45547a2`: insmod gf128mul rc=0 Live; fix 0005 + strip_vendor_8B) |
 | 9-6b' | Reconciliación DTB (SD-proven vs build) | ⏳ PENDIENTE |
 | 9-6c' | Latencia de display (5.12 ~10s vs 4.4 8s) | ⏳ PENDIENTE |
 | 9-6d | Wi-Fi | ⏳ PENDIENTE (depende 9-6c) |
@@ -49,7 +49,7 @@ HEAD = commit de cierre 9-6e-PPP (ADR-015 + refutación serial) — caché; vali
 
 ## BUILD STATUS
 
-- **KERNEL 5.12.4 k512 #44 (fix 9-6c, parche 0005/9005)**: BUILD PASS → **`e9d95de9`** (8.270.741 B, 2026-09-25 11:01) — **DEPLOY PENDIENTE de GO**. Gates TOOLCHAIN+PATCH PASS (audit v5 genéricos).
+- **KERNEL 5.12.4 k512 #45 (fix 9-6c COMPLETO: 0005/9005 + vendor-8B strip)**: BUILD PASS → **`e45547a2`** (8.270.717 B) **DESPLEGADO — PHYSICAL PASS**. Gates TOOLCHAIN+PATCH PASS.
 - **KERNEL 5.12.4 k512 #43 (PPP)**: BUILD PASS → `e07844bd` **DESPLEGADO** (NCM/ECM/ACM/RNDIS=y + PPP/SLIP=y, `usb0 disabled`).
 - **KERNEL 5.12.4 k512 (ECM)**: `7d87d15c` compilado, NO desplegado — premisa refutada (rama muerta, archivada).
 - **ROOTFS**: embed determinista (v6 flow) + pppd/chat (experimental retenido, ADR-015). Gates TOOLCHAIN/PATCH PASS.
@@ -58,7 +58,7 @@ HEAD = commit de cierre 9-6e-PPP (ADR-015 + refutación serial) — caché; vali
 
 ## PHYSICAL STATUS
 
-CONSOLA OPERATIVA: NOR de fábrica + kernel 5.12.4 `e07844bd` + rootfs propio + TreeFrogUI. MTP PHYSICAL PASS · networking NCM **PRODUCTION PHYSICAL PASS (2026-09-25, usuario)**: adaptador de red + `telnet 192.168.137.2` root bajo el overlay azul (limitación aceptada, ADR-015); sesión `restore done rc=0` · ACM serial sin azul. Stack NCM desplegado en SD (fork `66a3cbe`, read-back PASS).
+CONSOLA OPERATIVA: NOR de fábrica + kernel 5.12.4 `e45547a2` (9-6c loader fix) + rootfs propio + TreeFrogUI. **Module loader FUNCIONAL** (gf128mul Live; primer módulo cargado de la historia del port 5.12). MTP PHYSICAL PASS · networking NCM **PRODUCTION PHYSICAL PASS (2026-09-25, usuario)**: adaptador de red + `telnet 192.168.137.2` root bajo el overlay azul (limitación aceptada, ADR-015); sesión `restore done rc=0` · ACM serial sin azul. Stack NCM desplegado en SD (fork `66a3cbe`, read-back PASS).
 
 ## SOURCE SDK SHA256
 
@@ -66,12 +66,12 @@ e3211b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 
 ## ACTIVE BLOCKERS
 
-- **9-6c → EN VERIFICACIÓN FÍSICA**: fix compilado (kernel #44 `e9d95de9`, parche 0005/9005) — deploy+insmod test PENDIENTE de GO. Hasta PASS: workaround built-ins sigue vigente.
+- **NINGUNO** — 9-6c arreglado (loader funcional). Workaround built-ins puede retirarse gradualmente (los gadget functions siguen built-in por decisión ADR-015/9-6b; no es blocker).
 
 ## NEXT EXACT ACTION
 
-1. **(clase F — requiere GO)** Deploy del kernel #44 `e9d95de9` a `cubegm/vmlinux.uImage` (backup del `e07844bd` en la SD). Luego test físico: boot → NCM → telnet → `sh /mnt/sdcard/96c-test/96c-test.sh` → insmod sha256 **rc=0 sin OOPS** + regresión (MTP/NET/menú) → **9-6c PHYSICAL PASS** (desbloquea 9-6d Wi-Fi).
-2. Tras PASS: elegir 9-6d Wi-Fi / 9-6f ADB / 9-6b' DTB / 9-6c' latencia.
+1. Elegir siguiente punto: **9-6d Wi-Fi** (desbloqueado por 9-6c — carga real de .ko) · 9-6f ADB · 9-6b' reconciliación DTB · 9-6c' latencia display.
+2. Recomendación: cosechar evidencia final de la SD (results.log del PASS) al volver la SD al lector.
 3. PARA DESPUÉS (clase D, GO explícito): firmware AVP propio (`~/work/r36sx-hclinux/avp-build/`) — única vía para eliminar el overlay azul; D-2c flash del bootloader propio (staging `1734c340` — riesgo brick documentado).
 4. Post 9-6: decisión de migración 5.15 LTS (feasibility audit read-only primero).
 
