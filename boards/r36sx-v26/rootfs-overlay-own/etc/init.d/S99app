@@ -27,11 +27,11 @@ wait_for_media_ready()
 		for subdir in $(ls /media); do
 			# 8e: layout nuevo (treefrog/) o legacy (cubegm/)
 			if [ -e /media/$subdir/treefrog/zhijack.sh ] ; then
-				MNTDIR=$subdir
+				MNTDIR=$subdi
 				return
 			fi
 			if [ -e /media/$subdir/cubegm/zhijack.sh ] ; then
-				MNTDIR=$subdir
+				MNTDIR=$subdi
 				return
 			fi
 		done
@@ -55,7 +55,10 @@ mount --bind /media/${MNTDIR} /mnt/sdcard
 
 # 8e: si el stack vive en treefrog/, aliasarlo sobre cubegm (los binarios
 # del stack llevan paths cubegm/ compilados; ver cabecera).
+# fase D-3: mkdir -p crea el mount point en runtime si cubegm/ no existe
+# en la SD — el directorio es un artifacto del boot, no un requisito.
 if [ -f /mnt/sdcard/treefrog/zhijack.sh ]; then
+	mkdir -p /mnt/sdcard/cubegm
 	echo "8e: bind treefrog -> /mnt/sdcard/cubegm (stack relocalizado)"
 	mount --bind /mnt/sdcard/treefrog /mnt/sdcard/cubegm
 fi
@@ -66,7 +69,7 @@ if [ -d /media/${MNTDIR}/rootfs ] ; then
 	echo "mount --bind /media/${MNTDIR}/rootfs/lib /lib"
 	mount --bind /media/${MNTDIR}/rootfs/lib /lib
 	echo "mount --bind /media/${MNTDIR}/rootfs/usr /usr"
-	mount --bind /media/${MNTDIR}/rootfs/usr /usr
+	mount --bind /media/${MNTDIR}/rootfs/usr /us
 	echo "mount --bind /media/${MNTDIR}/rootfs/bin /bin"
 	mount --bind /media/${MNTDIR}/rootfs/bin /bin
 	echo "mount --bind /media/${MNTDIR}/rootfs/sbin /sbin"
