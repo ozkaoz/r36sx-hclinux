@@ -4,23 +4,36 @@
 
 ## Current State
 
-**Phases 0-9 COMPLETE — console physically boots with our own kernel + our own rootfs + TreeFrogUI fully functional.**
-**Phase 9-6 (maximize kernel 5.12.4) IN PROGRESS.**
+**FASE D COMPLETE — cubegm/ 100% eliminated. Console fully controlled.**
 
 What works:
-- Own kernel 5.12.4 (CLEAN PHYSICAL PASS: menu, audio, input, emulators; provenance-gated build, ABI fix ADR-012)
-- Own rootfs (Buildroot, ~10 MiB, deterministic embed)
-- TreeFrogUI fully functional (audio, video, emulator exit) — verified on hardware
+- **Boot 100% from `/boot/`** — own bootloader in NOR (factory + 7-byte path-prefix patch, flashed via HCProgrammer)
+- **cubegm/ does NOT exist** on the SD — all binaries recompiled or binary-patched with treefrog/ paths
+- Own kernel 5.12.4 (CLEAN PHYSICAL PASS: menu, audio, input, emulators, video, games, shutdown)
+- Own rootfs (Buildroot, deterministic embed)
+- TreeFrogUI fully functional (audio, video, emulator exit, shutdown)
 - USB Mode: MTP PHYSICAL PASS (Windows detection + file transfer)
-- USB networking: NCM/RNDIS network adapter + remote root shell work, but trigger the AVP **blue overlay** (display-only; kernel stays alive); CDC-ACM serial shell works with no overlay
-- Factory bootloader preserved (NOR contract documented, 2 attempts to replace resulted in bricks)
-- Recovery method proven (pin 2/4 short + HCProgrammer USB)
-- cubegm/ reduced to 4 files (NOR boot contract) + treefrog/ = full TreeFrogUI stack
+- USB networking: NCM adapter + telnet root (blue overlay = accepted AVP limitation, ADR-015)
+- Internet via PC ICS: ping/DNS/wget PASS
+- Module loader: PHYSICAL PASS (gf128mul .ko Live)
+- Recovery method proven (BootROM-USB always available — DDR-init factory preserved)
 
 ## Architecture
 
 ```
-BootROM → DDR-init → bootloader (stock, preserved) → AVP/HCRTOS (stock) → Linux 5.12.4 (ours) → TreeFrogUI
+BootROM → DDR-init (factory) → bootloader (factory + path-prefix "boot") →
+AVP/HCRTOS (factory) → Linux 5.12.4 (ours) → TreeFrogUI (treefrog/)
+```
+
+## SD Structure (no cubegm/)
+
+```
+boot/       → dtb.bin + avp.uImage + vmlinux.uImage + xgame-logo.bmp
+treefrog/   → full TreeFrogUI stack (binaries with treefrog/ paths)
+rootfs/     → our rootfs (lib, usr, bin, sbin, etc)
+roms/       → games
+frogui/     → icons, skins
+picoarch/   → configs
 ```
 
 ## Quick Start
@@ -28,21 +41,41 @@ BootROM → DDR-init → bootloader (stock, preserved) → AVP/HCRTOS (stock) �
 ```bash
 # Setup
 tar xzf hclinux-2024.02.y.2.tar.gz -C ~/work/r36-hclinux/
-# Build
-./scripts/build_kernel.sh r36sx-v26
-# Deploy
-cp artifacts/r36sx/vmlinux.uImage /mnt/g/cubegm/
-sync
+
+# Build kernel + bootloader + rootfs
+./scripts/build_kernel.sh r36sx-v26 k512
+
+# Flash bootloader (own path-prefix "boot") via HCProgramme
+# Firmware: D:/R36SX/hcprogrammer-own-kit/HCFOTA-own-v3.bin
+# Recovery: D:/R36SX/hcprogrammer-restore-kit/HCFOTA-factory-restore.bin
+
+# Deploy to SD
+cp build/r36sx-v26-k512/images/vmlinux.uImage /mnt/g/boot/
 ```
 
-## Documentation
+## Validation
 
-- [Build Manual](docs/BUILD_MANUAL.md) — compilation guide + methodology
-- [TreeFrogUI Contract](docs/TREEFROG_UI_CONTRACT.md) — formal interface
-- [Post-mortem](docs/experiments/2026-09-20_postmortem-brickeo-bootloader.md) — bootloader lessons
-- [Roadmap](docs/ROADMAP.md) — phases 0-9 done; phase 9-6 (kernel max development) in progress
+| Check | Status |
+|---|---|
+| STATIC | sh -n S99app, provenance gates (toolchain + patches) |
+| HOST | build_kernel.sh BUILD OK |
+| BUILD | kernel uImage + rootfs.cpio + bootloader.bin |
+| PHYSICAL | boot → menu → input → videos → games → shutdown |
+| INTERNET | ping 8.8.8.8 + DNS + wget (ICS) |
 
-## Recovery
+## Key Decisions
 
-Factory NOR restore kit (proven twice): `D:\R36SX\hcprogrammer-restore-kit\`
-Method: short NOR pins 2/4 → BootROM USB blank-chip mode → HCProgrammer + HCFOTA-factory-restore.bin
+- **ADR-012**: ABI drift fix (factory Dic-2025 userspace vs SDK Jul-2024) — kernel-side struct padding
+- **ADR-013**: Diagnostics opt-in only (production silent)
+- **ADR-014**: Own patches canonical in `patches/buildroot/linux/` + 900X sync
+- **ADR-015**: NCM = production network transport; blue overlay = accepted display-only limitation
+
+## Safety
+
+- NOR bootloader: factory + 7 bytes (path-prefix). Recovery via BootROM-USB (~300ms after DDR-init)
+- Factory recovery firmware: `D:/R36SX/hcprogrammer-restore-kit/HCFOTA-factory-restore.bin`
+- Full SD backup: `D:/R36SX/sd-full-backups/2026-09-23_mtp-knowngood/`
+
+## License
+
+See [LICENSE](LICENSE)

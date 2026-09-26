@@ -1,8 +1,8 @@
 # AGENTS.md — Constitución permanente de r36sx-hclinux
 
-**Versión:** 1.1 (2026-09-24 — canonización del stack en el fork)
+**Versión:** 1.2 (2026-09-25 — Fase D completa: cubegm/ 100% eliminado, boot propio desde /boot/)
 **Repo:** https://github.com/ozkaoz/r36sx-hclinux
-**Objetivo:** plataforma Linux/HCLinux reproducible para R36SX V2.6 (HiChip HC16xx, MIPS) con TreeFrogUI estable.
+**Objetivo:** plataforma Linux/HCLinux reproducible para R36SX V2.6 (HiChip HC16xx, MIPS) con TreeFrogUI estable y cubegm/ completamente eliminado.
 
 ---
 

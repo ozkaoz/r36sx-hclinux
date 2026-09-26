@@ -18,6 +18,7 @@ BootROM → bootloader (stock) → AVP/HCRTOS (stock, preservado) → **kernel p
 | **6. Contrato TreeFrogUI** | Matriz de dependencias + ABI fix | ✅ DONE (ADR-012) |
 | **7. Optimizaciones** | Boot rápido + dieta kernel + rendimiento | ✅ CLOSED (sin optimizaciones por decisión del usuario) |
 | **8. Rootfs propio** | Buildroot + clean install | ✅ DONE (SHIM cubegm/treefrog activo) |
+| **8. Fase D** | Eliminar cubegm/ 100% + boot propio | ✅ **COMPLETE** (2026-09-25) — cubegm/ NO EXISTE, boot desde /boot/, todos los binarios recompilados/patcheados |
 | **9. Kernel 5.12.4** | Upgrade desde 4.4.186 known-good | ✅ DONE — CLEAN PHYSICAL PASS (menú+audio+input+emuladores; kernel-5-only SD; boot ~10s; uImage 9731d6a5) |
 
 ## **9-6. Optimización máxima del kernel 5.12.4** (EN CURSO — decisión del usuario 2026-09-22)
