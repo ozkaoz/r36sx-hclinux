@@ -34,7 +34,7 @@ Trabajo FUERA del árbol git (scripts del stack, binarios recompilados) vive en 
 | 9-6c' | Latencia de display (~10s vs 8s) | ⏳ PENDIENTE |
 | 9-6d | Internet por USB | ✅ F1 PHYSICAL PASS vía PC (ICS); F2 celular PENDIENTE |
 | 9-6e | Red USB / overlay AVP | ✅ DONE (NCM producción, ADR-015) |
-| 9-6f | ADB (FunctionFS) | 🔨 EN CURSO — kernel `0b549b84` BUILD PASS (ffs+configfs_f_fs), stack fork `9ad7e89` (min_adbd+adb_mode.sh); PENDIENTE deploy Clase F + test físico 3 fases (`docs/experiments/2026-09-26_9-6f-adb-functionfs.md`) |
+| 9-6f | ADB (FunctionFS) | 🔨 EN CURSO — DESPLEGADO 2026-09-26 (SD: kernel `0b549b84` + stack fork `9ad7e89`, hashes verificados, backup `prev-96f.bak`); PENDIENTE test físico 3 fases (`docs/experiments/2026-09-26_9-6f-adb-functionfs.md`) |
 
 ## CURRENT HEAD
 
@@ -72,7 +72,7 @@ e3211b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 
 ## NEXT EXACT ACTION
 
-1. **9-6f deploy + test físico (GO Clase F requerido)**: copiar `vmlinux.uImage` `0b549b84` a `boot/` (backup prev como `vmlinux.uImage.prev-96f.bak`) + `deploy_adb_mode.sh /mnt/g` (stack fork `9ad7e89`) → boot → NETWORK → fases A (idle >60s), B (`adb shell` interactivo), C (bulk sostenido) → PHYSICAL PASS/FAIL del overlay. Rollback = 1 comando (ver experiment doc).
+1. **9-6f test físico (DESPLEGADO — GO usuario 2026-09-26)**: boot con SD actual (kernel `0b549b84` + stack adb_mode + flag `adb.mode`) → USB al PC → menú NETWORK → fases A (idle >60s), B (`adb shell` interactivo), C (bulk sostenido) → PHYSICAL PASS/FAIL del overlay. Rollback = restaurar `boot/vmlinux.uImage.prev-96f.bak` + borrar `adb.mode`.
 2. 9-6d vía celular (drivers `USB_USBNET/CDCETHER/RNDIS_HOST` como .ko — YA en el kernel `0b549b84`): insmod + udhcpc contra el teléfono.
 3. PARA DESPUÉS (clase D, GO explícito): firmware AVP propio (única vía para eliminar el overlay azul en el transporte NCM).
 4. Post 9-6: decisión de migración 5.15 LTS (feasibility audit read-only primero).
