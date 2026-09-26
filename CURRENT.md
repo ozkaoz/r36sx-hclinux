@@ -1,6 +1,6 @@
 # CURRENT.md — Operational Snapshot (CACHE — Git is the truth)
 
-**Updated:** 2026-09-25 (FASE D COMPLETE: cubegm/ 100% eliminado, boot propio desde /boot/, shutdown fixeado)
+**Updated:** 2026-09-26 (9-6f ADB/FunctionFS implementado — kernel `0b549b84` BUILD PASS, deploy/test físico pendientes)
 **Rule:** small snapshot, no history. No changelog.
 
 ## PROJECT
@@ -11,7 +11,7 @@ r36sx-hclinux — reproducible Linux/HClinux platform for HiChip consoles (HC16x
 
 **FASE D COMPLETE + Fase 9-6 (kernel 5.12.4 max development).**
 
-Trabajo FUERA del árbol git (scripts del stack, binarios recompilados) vive en el fork TreeFrogUI (`D:\GitHub\TreeFrogUI`, branch **`net-mode-app`**, commit `e9680c3`) — ver AGENTS §15.
+Trabajo FUERA del árbol git (scripts del stack, binarios recompilados) vive en el fork TreeFrogUI (`D:\GitHub\TreeFrogUI`, branch **`net-mode-app`**, commit `9ad7e89`) — ver AGENTS §15.
 
 ### FASE D — ELIMINACIÓN COMPLETA DE cubegm/ ✅ (2026-09-25)
 
@@ -34,11 +34,11 @@ Trabajo FUERA del árbol git (scripts del stack, binarios recompilados) vive en 
 | 9-6c' | Latencia de display (~10s vs 8s) | ⏳ PENDIENTE |
 | 9-6d | Internet por USB | ✅ F1 PHYSICAL PASS vía PC (ICS); F2 celular PENDIENTE |
 | 9-6e | Red USB / overlay AVP | ✅ DONE (NCM producción, ADR-015) |
-| 9-6f | ADB (FunctionFS) | ⏳ PENDIENTE |
+| 9-6f | ADB (FunctionFS) | 🔨 EN CURSO — kernel `0b549b84` BUILD PASS (ffs+configfs_f_fs), stack fork `9ad7e89` (min_adbd+adb_mode.sh); PENDIENTE deploy Clase F + test físico 3 fases (`docs/experiments/2026-09-26_9-6f-adb-functionfs.md`) |
 
 ## CURRENT HEAD
 
-`44faa96` — FASE D COMPLETE. Caché; validar con `git log -1`.
+`0bc6e1a` — 9-6f ADB/FunctionFS implementado (kernel BUILD PASS, deploy pendiente). Caché; validar con `git log -1`.
 
 ## KNOWN-GOOD STATE
 
@@ -52,6 +52,7 @@ Trabajo FUERA del árbol git (scripts del stack, binarios recompilados) vive en 
 ## BUILD STATUS
 
 - **KERNEL 5.12.4 k512 (S99app limpio + 0005/9005 + vendor-8B strip)**: BUILD PASS → kernel rebuild con pipeline pristine → **DESPLEGADO — PHYSICAL PASS** (boot, menú, input, videos, juegos, shutdown).
+- **KERNEL 5.12.4 k512 + 9-6f (FunctionFS+ADB)**: BUILD PASS 2026-09-26 13:21 → `vmlinux.uImage` `0b549b84` (8.425.980 B; f_fs.o+g_ffs.o; incluye 9-6d-F2 usbnet .ko inertes). TOOLCHAIN+PATCH PROVENANCE PASS. dtb SIN cambios (`116ddf26`). **NO desplegado** — deploy Clase F + test 3 fases pendientes.
 - **SDK**: 100% pristine (git checkout de hcboot.mk/Config.in, sin patches residuales).
 - **ROOTFS**: embed determinista (v6 flow). Gates TOOLCHAIN+PATCH PASS.
 - **KERNEL 4.4.186**: superseado; buildable (deprecación pendiente).
@@ -71,8 +72,9 @@ e3211b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 
 ## NEXT EXACT ACTION
 
-1. Elegir siguiente punto: 9-6d vía celular (drivers USB_USBNET+CDCETHER+RNDIS_HOST como .ko) · 9-6f ADB (posible sin overlay azul) · 9-6b' reconciliación DTB · 9-6c' latencia display.
-2. PARA DESPUÉS (clase D, GO explícito): firmware AVP propio (única vía para eliminar el overlay azul).
-3. Post 9-6: decisión de migración 5.15 LTS (feasibility audit read-only primero).
+1. **9-6f deploy + test físico (GO Clase F requerido)**: copiar `vmlinux.uImage` `0b549b84` a `boot/` (backup prev como `vmlinux.uImage.prev-96f.bak`) + `deploy_adb_mode.sh /mnt/g` (stack fork `9ad7e89`) → boot → NETWORK → fases A (idle >60s), B (`adb shell` interactivo), C (bulk sostenido) → PHYSICAL PASS/FAIL del overlay. Rollback = 1 comando (ver experiment doc).
+2. 9-6d vía celular (drivers `USB_USBNET/CDCETHER/RNDIS_HOST` como .ko — YA en el kernel `0b549b84`): insmod + udhcpc contra el teléfono.
+3. PARA DESPUÉS (clase D, GO explícito): firmware AVP propio (única vía para eliminar el overlay azul en el transporte NCM).
+4. Post 9-6: decisión de migración 5.15 LTS (feasibility audit read-only primero).
 
 Detalle Fase D: `docs/experiments/2026-09-25_faseD-2c-hcprogrammer-flash.md` + `2026-09-25_faseD-2b2-bl-nordtb-factory.md` + `2026-09-25_faseD-F1-avp-own-research.md`.
