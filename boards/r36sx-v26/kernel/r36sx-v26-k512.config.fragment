@@ -81,3 +81,17 @@ CONFIG_PPP_ASYNC=y
 CONFIG_PPP_DEFLATE=y
 CONFIG_SLIP=y
 
+
+# 9-6d F2 (2026-09-25): USB network host-side drivers — internet via celular
+# tethering. La consola actua como USB HOST, el telefono como gadget (RNDIS/CDC).
+# Compilados como modulos (.ko) — el module loader esta ARREGLADO (9-6c PASS).
+# insmod cdc_ether.ko + rndis_host.ko → udhcpc → internet del telefono.
+CONFIG_USB_USBNET=m
+CONFIG_USB_NET_CDCETHER=m
+CONFIG_USB_NET_RNDIS_HOST=m
+
+# 9-6f (2026-09-26): ADB via FunctionFS — shell/debug sin overlay azul
+# FunctionFS (clase 0xFF vendor-specific, como MTP que NO dispara overlay).
+# Gadgets creados via configfs igual que NCM/MTP pero con ffs.
+CONFIG_USB_FUNCTIONFS=y
+CONFIG_USB_CONFIGFS_F_FS=y

@@ -2,6 +2,10 @@
 
 Formato: una línea por iteración; detalle técnico en `docs/experiments/` y commits.
 
+## 2026-09-26
+
+- **Iteración 9-6f (ADB via FunctionFS — implementación completa, test físico PENDIENTE):** fragment k512 += `CONFIG_USB_FUNCTIONFS=y` + `CONFIG_USB_CONFIGFS_F_FS=y` (mismo build lleva 9-6d-F2 `USB_USBNET/CDCETHER/RNDIS_HOST=m`, inertes sin insmod). Kernel `0b549b84` BUILD PASS (13:21, f_fs.o+g_ffs.o, TOOLCHAIN+PATCH PROVENANCE PASS); dtb SIN cambios (`116ddf26`). Userspace en el fork TreeFrogUI `net-mode-app` `9ad7e89`: `apps/adb_mode/` — min_adbd (daemon ADB mínimo estático mipsel: ffs V2 ff/42/01, 2 bulk EPs, CNXN non-secure, shell: v1 raw, 1-WRTE flow control), `adb_mode.sh` (gadget `adb_ffs` 0x18d1:0x4EE2 + mount functionfs + UDC bind retry + sesión con exit_watcher + teardown), flag `adb.mode` en dispatcher, `deploy_adb_mode.sh`. Hipótesis: perfil ACM-puro/MTP (0xFF, sin netdev, shell interactivo) → SIN overlay. Test 3 fases (idle >60s / shell interactivo / bulk sostenido). PENDIENTE: GO Clase F → deploy (solo `vmlinux.uImage`, rollback 1-comando) → PHYSICAL PASS/FAIL. Docs: `docs/experiments/2026-09-26_9-6f-adb-functionfs.md`.
+
 ## 2026-09-25
 
 - **FASE D ULTIMATE COMPLETE (cubegm/ 100% eliminado + boot propio + shutdown fix):** cubegm/ NO EXISTE en la SD. Boot 100% desde /boot/ (bootloader propio en NOR: fábrica + 7 bytes path-prefix "boot", flasheado via HCProgrammer con recovery BootROM-USB). S99app escrito desde cero (0 refs cubegm, sin bind mount, sh -n OK — la causa raiz de todos los fallos previos eran syntax errors de sed/replace: broken echo quoting + orphaned else/fi). Todos los binarios: picoarch/frogui/zhijack/picoarch_hi recompilados con treefrog/ paths + driver*.so/pcsx4all/frogshell/pico286/lgpt/ebook/rockbox/video_player/image_viewer/libemu_md binary-patcheados (cubegm→tf, null-padded). Shutdown FIXEADO (exec→regular call; powergpio rc=0). SD limpia: logs, backups .bak eliminados. Consola 100% funcional: boot + menu + input + videos + juegos + shutdown. Commits: r36sx-hclinux `44faa96` + TreeFrogUI `e9680c3`.
