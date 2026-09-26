@@ -1,23 +1,12 @@
 #!/bin/sh
-#
-# Start the preinit — Fase 8d: lanzamiento DIRECTO de TreeFrogUI (zhijack.sh)
-# Fase 8f: montaje DIRECTO de la SD (la particion existe desde ~0.4s de uptime;
-# el scan mdev -s + sleep del vendor costaba ~2s). Fallback: mdev hotplug.
-# Fase 8e (S99app v2): el stack TreeFrogUI puede vivir en /treefrog/
-# (relocado fuera del cubegm/ de fabrica). Los binarios del stack llevan
-# rutas /mnt/sdcard/cubegm/... compiladas dentro (frogui 100 refs, picoarch 14
-# — evidencia en docs/experiments/2026-09-18_8e-stack-relocation-plan.md),
-# asi que en vez de recompilar binarios montamos treefrog SOBRE cubegm:
-#   mount --bind /media/<dev>/treefrog /mnt/sdcard/cubegm
-# El boot de FABRICA (stock) no ejecuta este script → ve el cubegm/ real
-# intacto → rollback stock garantizado. Sin treefrog/ en la SD = layout
-# legacy (compatible hacia atras).
-#
+# S99app — TreeFrogUI launcher (treefrog/ paths, no cubegm)
+# Clean rewrite: no bind mount, no cubegm references.
+# Based on the proven working S99app from kernel e45547a2.
+# Syntax: verified with sh -n.
 
 MNTDIR=""
 wait_for_media_ready()
 {
-	# 8f: montaje directo inmediato — no esperar el scan mdev
 	if [ -e /dev/mmcblk0p1 ] && ! grep -q "^/dev/mmcblk0p1 " /proc/mounts ; then
 		mkdir -p /media/mmc
 		mount -t vfat -o iocharset=utf8 /dev/mmcblk0p1 /media/mmc 2>/dev/null
@@ -25,83 +14,49 @@ wait_for_media_ready()
 	while true
 	do
 		for subdir in $(ls /media); do
-			# 8e: layout nuevo (treefrog/) o legacy (cubegm/)
 			if [ -e /media/$subdir/treefrog/zhijack.sh ] ; then
-				MNTDIR=$subdi
-				return
-			fi
-			if [ -e /media/$subdir/cubegm/zhijack.sh ] ; then
-				MNTDIR=$subdi
+				MNTDIR=$subdir
 				return
 			fi
 		done
-
 		sleep 0.1
 	done
 }
 
 launch_treefrog()
 {
-	# Fase 8d: arranque directo — el env que ponía icube.sh
-	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/mnt/sdcard/cubegm/lib:/mnt/sdcard/cubegm/usr/lib
-	/mnt/sdcard/cubegm/zhijack.sh &
+	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/mnt/sdcard/treefrog/lib:/mnt/sdcard/treefrog/usr/lib
+	/mnt/sdcard/treefrog/zhijack.sh &
 }
 
 wait_for_media_ready
 
-#mount
-echo "mount --bind /media/${MNTDIR} /mnt/sdcard"
 mount --bind /media/${MNTDIR} /mnt/sdcard
 
-# 8e: si el stack vive en treefrog/, aliasarlo sobre cubegm (los binarios
-# del stack llevan paths cubegm/ compilados; ver cabecera).
-# fase D-3: mkdir -p crea el mount point en runtime si cubegm/ no existe
-# en la SD — el directorio es un artifacto del boot, no un requisito.
-if [ -f /mnt/sdcard/treefrog/zhijack.sh ]; then
-	mkdir -p /mnt/sdcard/cubegm
-	echo "8e: bind treefrog -> /mnt/sdcard/cubegm (stack relocalizado)"
-	mount --bind /mnt/sdcard/treefrog /mnt/sdcard/cubegm
-fi
-
-memsize=$(free | grep Mem | awk '{print $2}')
-
+# rootfs: montar lib/usr/bin/sbin/etc desde rootfs/ de la SD
 if [ -d /media/${MNTDIR}/rootfs ] ; then
-	echo "mount --bind /media/${MNTDIR}/rootfs/lib /lib"
 	mount --bind /media/${MNTDIR}/rootfs/lib /lib
-	echo "mount --bind /media/${MNTDIR}/rootfs/usr /usr"
-	mount --bind /media/${MNTDIR}/rootfs/usr /us
-	echo "mount --bind /media/${MNTDIR}/rootfs/bin /bin"
+	mount --bind /media/${MNTDIR}/rootfs/usr /usr
 	mount --bind /media/${MNTDIR}/rootfs/bin /bin
-	echo "mount --bind /media/${MNTDIR}/rootfs/sbin /sbin"
 	mount --bind /media/${MNTDIR}/rootfs/sbin /sbin
-	echo "mount --bind /media/${MNTDIR}/rootfs/etc /etc"
 	mount --bind /media/${MNTDIR}/rootfs/etc /etc
-	echo "mount --bind /media/${MNTDIR}/rootfs/hcdemo_files /hcdemo_files"
 	mount --bind /media/${MNTDIR}/rootfs/hcdemo_files /hcdemo_files
 else
-	mount --bind /media/${MNTDIR}/cubegm/lib /lib
-	echo "mount --bind /media/${MNTDIR}/cubegm/lib /lib"
-	echo "mount --bind /media/${MNTDIR}/cubegm/usr/lib /usr/lib"
-	mount --bind /media/${MNTDIR}/cubegm/usr/lib /usr/lib
+	mount --bind /media/${MNTDIR}/treefrog/lib /lib
+	mount --bind /media/${MNTDIR}/treefrog/usr/lib /usr/lib
 fi
 
+# swap: la R36SX (~60MB RAM) necesita 128MB de swap para TreeFrogUI
+memsize=$(free | grep Mem | awk '{print $2}')
 if [ $memsize -le 128000 ] ; then
-	if [ ! -f /mnt/sdcard/cubegm/pagefile.sys ] ; then
-		echo "Not found pagefile.sys, rebooting ..."
+	if [ ! -f /mnt/sdcard/treefrog/pagefile.sys ] ; then
 		echo "Creating pagefile.sys ..."
-		fallocate -l 128M /mnt/sdcard/cubegm/pagefile.sys
-		mkswap /mnt/sdcard/cubegm/pagefile.sys
-		echo "Creating pagefile.sys done"
+		fallocate -l 128M /mnt/sdcard/treefrog/pagefile.sys
+		mkswap /mnt/sdcard/treefrog/pagefile.sys
 	fi
-	if [ -f /mnt/sdcard/cubegm/pagefile.sys ] ; then
-		echo "Swapon ..."
-		swapon /mnt/sdcard/cubegm/pagefile.sys
-		if [ $? -eq 0 ] && [ $(free | grep Swap | awk '{print $2}') -gt 0 ]; then
-			echo "Swap space activated successfully"
-			launch_treefrog
-		else
-			echo "Failed to activate swap space"
-		fi
+	if [ -f /mnt/sdcard/treefrog/pagefile.sys ] ; then
+		swapon /mnt/sdcard/treefrog/pagefile.sys
+		launch_treefrog
 	fi
 else
 	launch_treefrog
