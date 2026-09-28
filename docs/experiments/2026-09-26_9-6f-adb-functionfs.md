@@ -259,3 +259,26 @@ Binario min_adbd v4: ebe57ed97f14c2e37c69a08512d6f1e5d44aeca6bdb5b22a4e6bdea9094
 fork commit de7015. Nota menor: emulator-5562 (resto Genymotion en
 localhost:5562/5563) agrega ruido de reconexión al server — inofensivo para el
 device R36SX.
+
+## ADDENDUM v6 (2026-09-28) — OPEN aceptado (OKAY) pero el output del shell nunca fluye; fix RAM-shell + pump instrumentado
+
+Con daemon v4: CNXN OK, transport ONLINE, OPEN aceptado con **OKAY** (trace +
+probe WinUSB propio), pero **el WRTE del output del shell jamas llega** (probe:
+8s timeout tras el OKAY; adb server: 30s sin un byte). El daemon queda vivo
+(procesa CLSE posterior). Ambos caminos (-c e interactivo) identicos.
+
+Hipotesis operativa (evidencia net_mode): **exec de /bin/sh desde el rootfs
+bind-mounted (SD) con el musb activo puede deadlockear** — exactamente el
+patron documentado en net_ncm.sh ("RAM shell wrapper: busybox y exit_watcher
+en tmpfs. Sin esto, fork/exec lee del SD bind-mounted mientras el musb
+satura el bus"). min_adbd corria desde RAM (/tmp/bin) pero su CHILD exec
+/bin/sh desde el SD.
+
+Fix v5 (fork 3faad58):
+1. adb_mode.sh crea el RAM shell wrapper ANTES de lanzar el daemon (busybox
+   -> /tmp/bin/busybox + /tmp/bin/sh, patron net_mode).
+2. min_adbd exec /tmp/bin/sh (fallback /bin/sh).
+3. pump instrumentado: logmsg por cada WRTE (bytes + rc) — si vuelve a
+   fallar, ADB_MODE_DEBUG.log cuenta la historia exacta via MTP.
+
+Binario ecc891c2. Deploy v7 = min_adbd + adb_mode.sh.
