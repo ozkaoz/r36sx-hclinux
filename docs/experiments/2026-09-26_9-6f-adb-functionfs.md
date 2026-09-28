@@ -126,3 +126,44 @@ solo archivo en SD) + `HCFOTA-factory-restore.bin` si fuera necesario.
 - Commits: fragment 9-6f+9-6d-F2 (este repo) + fork `9ad7e89` (apps/adb_mode).
 - Pendiente: GO Clase F del usuario → deploy → test físico 3 fases →
   PHYSICAL PASS/FAIL documentado.
+
+## ADDENDUM v2 (2026-09-27) — DEPLOY v1 FALLECIÓ EN `mkdir ffs.adb`: causa raíz cazada
+
+**Evidencia física (deploy v1, kernel `0b549b84`)**: menú/boot/MTP 100% OK
+(USB MODE PHYSICAL PASS con el kernel nuevo). NETWORK con `adb.mode` → **retorno
+inmediato al menú** (sin reinicio de consola, sin sonido USB en Windows). Log
+`ADB_MODE_DEBUG.log` (leído via MTP COM desde el PC):
+
+```
+mkdir: can't create directory '.../usb_gadget/adb_ffs/functions/ffs.adb': Device or resource busy
+ln: .../configs/c.1/ffs.adb: No such file or directory
+FAIL link → exit 1 → menú
+```
+
+**Causa raíz (análisis del código del tree 5.12.4 — evidencia citada):**
+
+1. `CONFIG_USB_FUNCTIONFS=y` (v1) compila el driver **legacy** `g_ffs.c`
+   BUILT-IN (`legacy/Makefile:32`).
+2. Su `module_init(gfs_init)` con solo FUNCTIONFS_GENERIC → `func_num<2` →
+   `gfs_single_func=true` → `usb_get_function_instance("ffs")` +
+   **`ffs_single_dev()` marca el único instance ffs como `single`**
+   (g_ffs.c ~186-206).
+3. Desde el boot, CUALQUIER `mkdir ffs.*` en configfs pasa por
+   `_ffs_alloc_dev()`: `if (_ffs_get_single_dev()) return ERR_PTR(-EBUSY)`
+   (f_fs.c:3629-3631) → **EBUSY exacto del log**, desde boot limpio.
+
+El legacy sabotea el camino configfs consumiendo el instance único. **El
+configfs NO necesita el legacy**: `CONFIG_USB_CONFIGFS_F_FS` selecciona
+`USB_F_FS` (f_fs.c se compila igual; solo deja de construirse g_ffs.c).
+
+**Fix v2 (1 línea fragment):** `CONFIG_USB_FUNCTIONFS=y` →
+`# CONFIG_USB_FUNCTIONFS is not set` (se mantiene `CONFIG_USB_CONFIGFS_F_FS=y`).
+Rebuild k512 v2 → redeploy → retest 3 fases.
+
+**Fix stack (fork `4d4278c`):** el `mkdir ffs.adb` con error era enmascarado
+por el fallback `log "ffs.adb exists"` — ahora es fatal con pista de
+diagnóstico (`FAIL mkdir ffs.adb (kernel: ... legacy FUNCTIONFS off?)`).
+
+Discriminator físico del deploy v1 que valida la hipótesis de partida: MTP
+(role switch + configfs + musb) funciona perfecto en el kernel 0b549b84 →
+el fallo era SOLO del camino ffs.

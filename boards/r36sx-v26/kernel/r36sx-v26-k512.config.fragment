@@ -90,8 +90,14 @@ CONFIG_USB_USBNET=m
 CONFIG_USB_NET_CDCETHER=m
 CONFIG_USB_NET_RNDIS_HOST=m
 
-# 9-6f (2026-09-26): ADB via FunctionFS — shell/debug sin overlay azul
+# 9-6f v2 (2026-09-26): ADB via FunctionFS — shell/debug sin overlay azul.
 # FunctionFS (clase 0xFF vendor-specific, como MTP que NO dispara overlay).
 # Gadgets creados via configfs igual que NCM/MTP pero con ffs.
-CONFIG_USB_FUNCTIONFS=y
+# FIX v2 (evidencia ADB_MODE_DEBUG.log 2026-09-26): CONFIG_USB_FUNCTIONFS=y
+# compila el legacy g_ffs.c BUILT-IN; su module_init (func_num<2 -> single)
+# crea EL instance ffs y lo marca single (ffs_single_dev, g_ffs.c) ->
+# _ffs_alloc_dev() devuelve -EBUSY para CUALQUIER mkdir ffs.* en configfs
+# (f_fs.c:3629). El camino configfs NO necesita el legacy: CONFIGFS_F_FS
+# selecciona USB_F_FS (f_fs.c se compila igual). Legacy OFF, configfs ON.
+# CONFIG_USB_FUNCTIONFS is not set
 CONFIG_USB_CONFIGFS_F_FS=y
