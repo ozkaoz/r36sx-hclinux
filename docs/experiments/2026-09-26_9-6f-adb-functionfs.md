@@ -167,3 +167,30 @@ diagnóstico (`FAIL mkdir ffs.adb (kernel: ... legacy FUNCTIONFS off?)`).
 Discriminator físico del deploy v1 que valida la hipótesis de partida: MTP
 (role switch + configfs + musb) funciona perfecto en el kernel 0b549b84 →
 el fallo era SOLO del camino ffs.
+
+## ADDENDUM v3 (2026-09-27 noche) — kernel v2 OK; daemon v1 murió por la fase STRINGS de ffs
+
+**Evidencia física (deploy v2, kernel `5adde850`)**: NETWORK → **mkdir ffs.adb
+OK** (`gadget creado (ff/42/01, 2 bulk eps)`), mount functionfs OK, role OK
+→ el fix del legacy FUNCIONA. Pero:
+
+```
+min_adbd: open endpoints: No such file or directory
+FAIL UDC bind after 30 tries (15 s) → restore → menú
+```
+
+El "sonido de conexión" de Windows NO fue enumeración: fue el role switch a
+peripheral sin gadget bindeado (musb sin pullup de descriptores).
+
+**Causa raíz #2 (f_fs.c:330-395)**: la máquina de estados ffs es
+`READ_DESCRIPTORS → READ_STRINGS → epfiles_create → FFS_ACTIVE`. **ep1/ep2
+solo existen tras la fase STRINGS** — el daemon v1 escribía descriptores y
+saltaba las strings (iInterface=0 ⇒ asumimos omitibles). El ffs quedó en
+READ_STRINGS para siempre → open ep1 ENOENT → sin activación → bind nunca.
+
+**Fix (daemon-only, kernel v2 queda)**: tras los descriptores, escribir el
+bloque STRINGS mínimo — `str_count=0, lang_count=0` — que `__ffs_data_got_strings`
+acepta cuando los descriptores no referencian strings (`if (!needed_count)
+return 0`, f_fs.c:2600). Binario `min_adbd` v2:
+`72784bfb5ce8171f3c7e318106f174b1c02d3a1691c28a48dd4808ba84277bd9`.
+Fork commit `eb17efc`. Deploy: solo `treefrog/min_adbd`.

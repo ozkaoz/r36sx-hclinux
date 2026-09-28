@@ -11,7 +11,7 @@ r36sx-hclinux — reproducible Linux/HClinux platform for HiChip consoles (HC16x
 
 **FASE D COMPLETE + Fase 9-6 (kernel 5.12.4 max development).**
 
-Trabajo FUERA del árbol git (scripts del stack, binarios recompilados) vive en el fork TreeFrogUI (`D:\GitHub\TreeFrogUI`, branch **`net-mode-app`**, commit `4d4278c`) — ver AGENTS §15.
+Trabajo FUERA del árbol git (scripts del stack, binarios recompilados) vive en el fork TreeFrogUI (`D:\GitHub\TreeFrogUI`, branch **`net-mode-app`**, commit `eb17efc`) — ver AGENTS §15.
 
 ### FASE D — ELIMINACIÓN COMPLETA DE cubegm/ ✅ (2026-09-25)
 
