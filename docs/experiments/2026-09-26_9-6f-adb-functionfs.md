@@ -194,3 +194,44 @@ acepta cuando los descriptores no referencian strings (`if (!needed_count)
 return 0`, f_fs.c:2600). Binario `min_adbd` v2:
 `72784bfb5ce8171f3c7e318106f174b1c02d3a1691c28a48dd4808ba84277bd9`.
 Fork commit `eb17efc`. Deploy: solo `treefrog/min_adbd`.
+
+## ADDENDUM v4 (2026-09-27 noche 2) — enumeración OK + SIN OVERLAY; adb v37 caía por transfer única header+payload — fix: DOS transfers (patrón adbd)
+
+**Estado físico tras v3** (kernel `5adde850` + daemon v2 + serial USB en el
+gadget): **Windows enumera "TreeFrogUI ADB (FunctionFS)", WinUSB bound
+(`winusb.inf` "ADB Device", match inbox ff/42/01), sesión ESTABLE y
+SIN OVERLAY AZUL durante conexión prolongada.** El fix del serial era
+obligatorio: adb DESCARTA devices sin iSerialNumber
+(`usb_windows.cpp:603 cannot get serial number -> usb_cleanup_handle`,
+trace ADB_TRACE=usb).
+
+**Síntoma restante**: `adb devices` vacío; el server repetía cada 1s:
+`adding a new device → CNXN (24+302 escritos) → usb_read got: 142 →
+connection terminated: read failed → kick`.
+
+**Diagnóstico local (todo reproducido sin tocar la consola):**
+1. **Harness TCP** con el mismo core del daemon (test_adbd.c): `adb connect`
+   + `adb devices` = **device** + **`adb shell` funciona** → protocolo y shell
+   100% correctos (CRC verificado: crc32("123456789")=cbf43926).
+2. **Probe WinUSB propio** (csc/C#): CNXN exchange OK por USB — PERO los
+   descriptores ACTIVOS muestran **EP OUT=0x01** (el autoconfig de ffs
+   renumeró el 0x02 declarado; IN=0x81, ambos bulk 512, HS).
+3. **Source de adb** (mirror LineageOS = packages/modules/adb): causa raíz
+   final en `client/transport_usb.cpp` — `UsbReadMessage()`: lee un chunk de
+   `max_packet_size` (512) y **requiere `n == 24` exacto** para el header;
+   el daemon v2 enviaba header+payload como **UNA transfer de 142 B** →
+   `n=142 != 24` → connection terminated. El adbd real envía header y
+   payload como **writes separados** (`daemon/usb.cpp Write()`:
+   header block + payload blocks, con ZLP cuando el payload es múltiplo del
+   maxpacket — usb_ffs zero_mask). TCP funciona porque el socket lee los
+   24 bytes exactos progresivamente.
+
+**Fix v3 (daemon-only):** `send_pkt` = write(24 header) + write(payload)
+(+ ZLP si `len & 511 == 0`), patrón adbd exacto. Binario:
+`eb005c8505b9abd7026c8dd7ad72a529e16569fdc7b039d0dc938430e248e2c4`,
+fork commit `234b1d5`. Kernel y stack sin cambios.
+
+**Evidencia de overlay acumulada hasta aquí**: gadget ffs enumerado + idle
+prolongado + CNXN repetido cada 1s durante ~20 min → **CERO overlay**
+(muy por encima de la referencia NCM de ~30 s). La consola quedó usable
+(USB MODE/MTP verificado durante la sesión).
