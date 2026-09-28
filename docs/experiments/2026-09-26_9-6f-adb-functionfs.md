@@ -235,3 +235,27 @@ fork commit `234b1d5`. Kernel y stack sin cambios.
 prolongado + CNXN repetido cada 1s durante ~20 min → **CERO overlay**
 (muy por encima de la referencia NCM de ~30 s). La consola quedó usable
 (USB MODE/MTP verificado durante la sesión).
+
+## ADDENDUM v5 (2026-09-27 madrugada) — transporte ONLINE; shell colgado por stream huérfano — fix daemon v4
+
+Con el fix v3 (dos transfers), **db devices = R36SX0001 device** (transporte
+ONLINE, banner parseado). Pero db shell colgaba. Trace ADB_TRACE=usb,transport
+evidenció dos bugs del daemon (ambos introducidos/expuestos por mis propios
+probes):
+
+1. **Stream huérfano**: un probe abrió shell: y terminó sin CLSE → daemon
+   quedó have_stream=1 → el OPEN real del server fue rechazado con CLSE
+   (trace: 	o remote [OPEN] arg0=3 shell:uname -a → rom remote [CLSE]
+   arg0=1 arg1=3) → shell nunca abre → hang. **Fix: cada CNXN resetea el
+   estado de stream** (nueva conexión = estado limpio; host muerto
+   mid-stream no bloquea al siguiente).
+2. **Servicio sin NUL**: el probe envió shell:uname -a sin el NUL de
+   terminación (adb real manda 15 bytes con NUL — hex del trace) → el parser
+   leyó basura tras data_length → sh ejecutó uname -a<garbage> →
+   uname: invalid option. **Fix: copia defensiva del servicio acotada a
+   data_length con NUL garantizado.**
+
+Binario min_adbd v4: ebe57ed97f14c2e37c69a08512d6f1e5d44aeca6bdb5b22a4e6bdea9094b6732,
+fork commit de7015. Nota menor: emulator-5562 (resto Genymotion en
+localhost:5562/5563) agrega ruido de reconexión al server — inofensivo para el
+device R36SX.
