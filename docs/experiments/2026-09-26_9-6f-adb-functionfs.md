@@ -282,3 +282,65 @@ Fix v5 (fork 3faad58):
    fallar, ADB_MODE_DEBUG.log cuenta la historia exacta via MTP.
 
 Binario ecc891c2. Deploy v7 = min_adbd + adb_mode.sh.
+
+## ADDENDUM FINAL (2026-09-28) — RESULTADO DEL EXPERIMENTO + DEFECTO DEL SHELL DOCUMENTADO
+
+### La pregunta del experimento: RESPONDIDA — SIN OVERLAY
+
+**Hipótesis confirmada en todas las sesiones fisicas (17 boots, ~6h de sesion live):**
+gadget ffs (clase 0xFF, ADB ff/42/01) enumerado + idle + CNXN cada 1s por ~20min
++ todo el martilleo de la sesion de debug → **CERO overlay azul** (referencia NCM:
+~30s). La consola queda usable (menu/USB MODE/MTP verificados durante sesiones).
+El transporte \db devices\ = **R36SX0001 device estable en cada boot**.
+**9-6f OVERLAY: PASS.** El shell interactivo ADB queda como defecto abierto.
+
+### Cadeena de bugs REALES arreglados (cada uno verificado en consola)
+
+1. legacy g_ffs built-in reclama el instance ffs unico → EBUSY en configfs
+   (g_ffs.c module_init; f_fs.c:3629 guard) → FUNCTIONFS=n (kernel v2 5adde850)
+2. FSM ffs exige fase STRINGS antes de crear ep1/ep2 (f_fs.c:330-395) → bloque
+   STRINGS vacio (f_fs.c:2600 acepta sin refs)
+3. adb descarta devices sin iSerialNumber (usb_windows.cpp:603) → serial en configfs
+4. adb Windows exige header == 24 bytes exactos por chunk (transport_usb.cpp
+   UsbReadMessage) → send_pkt en DOS writes + ZLP (patron adbd daemon/usb.cpp)
+5. stream huerfano rechia el OPEN real con CLSE → reset de stream por CNXN
+(+ fix del ethernet del PC: DHCP deshabilitado + IP manual residual 169.254)
+
+### El defecto del shell: evidencia completa y teorias eliminadas
+
+**Sintoma final (v15-v17):** worker ash interactivo spawneado EN EL ARRANQUE
+(pre-bind: ash-alive en log), alimentado por stdin post-bind → **MUTE absoluto**
+(ni output, ni EOF, ni un byte en el pipe). El daemon (estatico) corre perfecto
+en el mismo estado. Autorespawns y feeds via top-level probados.
+
+**Teorias ELIMINADAS por experimento:** colisiones de fd (log: limpias), fd0 pipe
+(cerrado: igual), prctl (eliminado: igual), shell/applets en RAM (igual), largo
+de argv 1..80 (todos mudos), orden del fork (v4 mudo siendo fork#1), frame de
+4KB en stack (static: igual), contexto del fork (top-level: igual), parens del
+feed / subshell (eliminados v17: igual), dinamico vs estatico (busybox estatico
+construido con el mismo config: igual).
+
+**Anomalias que delimitan el problema:** (a) v3-probe: el shell completo corrio
+y fluyo (362B) SIN read pendiente en ep_in; (b) v8 selftest: fork+exec+output
+fluyen LIVE con el server conectado; (c) worker pre-existente alimentado
+post-bind: mudo. La variable discriminante restante apunta al estado del musb
+con IN-request perpetuamente pendiente (como lo mantiene el server adb) vs
+reads transitorios (probe), interactuando con el scheduler/wakeup de procesos
+que NO estan en el camino USB — sospecha kernel-side: el musb portado (9102)
+con f_fs en estado armed-TX.
+
+### NEXT EXACT ACTION (proxima sesion)
+
+1. **Diagnostico definitivo desde el lado NCM**: remover adb.mode → NETWORK
+   (NCM) → telnet → con el adb gadget EN SESSION (segunda consola... o
+   re-entrar adb tras NCM) → \cat /proc/<worker_pid>/stat /proc/<worker_pid>/wchan   → estado R/S/D del worker mientras esta mudo: D = bloqueo kernel/driver
+   confirmado; S = wakeup nunca disparado; R = starvation.
+2. Capturar los logs finales (v16/v17) de la SD.
+3. Si D/wchan apunta al musb → audit del 9102 (musb port) en el estado
+   TX-armed; posible fix kernel o workaround en el daemon (p.ej. no mantener
+   el worker: 1 worker por comando spawneado pre... inalcanzable — evaluar).
+4. Alternativa productiva YA disponible: NCM (telnet) para shell; ADB queda
+   en alpha (devices/transport OK, shell PENDIENTE).
+
+Artefactos: kernel 5adde850 (sin cambios desde v2) · daemon v17 f75f6eaf ·
+busybox-static 0110be2a · fork TreeFrogUI net-mode-app 988c8b6.

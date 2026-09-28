@@ -9,9 +9,9 @@ r36sx-hclinux — reproducible Linux/HClinux platform for HiChip consoles (HC16x
 
 ## CURRENT PHASE
 
-**FASE D COMPLETE + Fase 9-6 (kernel 5.12.4 max development).**
+**FASE D COMPLETE + 9-6f ADB/FunctionFS: OVERLAY PASS · transporte `adb devices` OK · shell ADB = defecto abierto (ver NEXT EXACT ACTION).**
 
-Trabajo FUERA del árbol git (scripts del stack, binarios recompilados) vive en el fork TreeFrogUI (`D:\GitHub\TreeFrogUI`, branch **`net-mode-app`**, commit `eb17efc`) — ver AGENTS §15.
+Trabajo FUERA del árbol git (scripts del stack, binarios recompilados) vive en el fork TreeFrogUI (`D:\GitHub\TreeFrogUI`, branch **`net-mode-app`**, commit `988c8b6`) — ver AGENTS §15.
 
 ### FASE D — ELIMINACIÓN COMPLETA DE cubegm/ ✅ (2026-09-25)
 
@@ -34,7 +34,7 @@ Trabajo FUERA del árbol git (scripts del stack, binarios recompilados) vive en 
 | 9-6c' | Latencia de display (~10s vs 8s) | ⏳ PENDIENTE |
 | 9-6d | Internet por USB | ✅ F1 PHYSICAL PASS vía PC (ICS); F2 celular PENDIENTE |
 | 9-6e | Red USB / overlay AVP | ✅ DONE (NCM producción, ADR-015) |
-| 9-6f | ADB (FunctionFS) | 🔨 EN CURSO — DESPLEGADO 2026-09-26 (SD: kernel `0b549b84` + stack fork `9ad7e89`, hashes verificados, backup `prev-96f.bak`); PENDIENTE test físico 3 fases (`docs/experiments/2026-09-26_9-6f-adb-functionfs.md`) |
+| 9-6f | ADB (FunctionFS) | 🔶 PARCIAL: **overlay PASS** (gadget ffs nunca dispara el azul — hipótesis confirmada) + transporte `adb devices` = R36SX0001 device estable; **shell ADB = defecto abierto** (daemon v17 + busybox estático; worker mute post-bind; 10 teorías eliminadas; sospecha kernel-side musb 9102 con IN-read perpetuo — ver addendum final del experiment doc) |
 
 ## CURRENT HEAD
 
@@ -72,9 +72,10 @@ e3211b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 
 ## NEXT EXACT ACTION
 
-1. **9-6f test físico (DESPLEGADO — GO usuario 2026-09-26)**: boot con SD actual (kernel `0b549b84` + stack adb_mode + flag `adb.mode`) → USB al PC → menú NETWORK → fases A (idle >60s), B (`adb shell` interactivo), C (bulk sostenido) → PHYSICAL PASS/FAIL del overlay. Rollback = restaurar `boot/vmlinux.uImage.prev-96f.bak` + borrar `adb.mode`.
-2. 9-6d vía celular (drivers `USB_USBNET/CDCETHER/RNDIS_HOST` como .ko — YA en el kernel `0b549b84`): insmod + udhcpc contra el teléfono.
-3. PARA DESPUÉS (clase D, GO explícito): firmware AVP propio (única vía para eliminar el overlay azul en el transporte NCM).
-4. Post 9-6: decisión de migración 5.15 LTS (feasibility audit read-only primero).
+1. **9-6f shell (defecto abierto) — diagnóstico definitivo vía NCM**: quitar `adb.mode` de la SD → NETWORK (NCM) → `telnet 192.168.137.2` → **con la consola en sesión adb (gadget live + server conectado)** verificar el estado del worker: `cat /proc/<pid>/stat /proc/<pid>/wchan /proc/<pid>/status` → R/S/D decide: D = bloqueo kernel (musb 9102 audit), S = wakeup roto, R = starvation. Capturar también los logs v16/v17 de la SD.
+2. **9-6d vía celular**: drivers `USB_USBNET/CDCETHER/RNDIS_HOST` como .ko YA en el kernel `0b549b84`: insmod + udhcpc contra el teléfono.
+3. **Shell de producción YA disponible**: NCM/telnet (ADR-015) — para trabajo real usar NCM mientras el shell ADB se debuggea.
+4. PARA DESPUÉS (clase D, GO explícito): firmware AVP propio (elimina el overlay en el transporte NCM).
+5. Post 9-6: decisión de migración 5.15 LTS (feasibility audit read-only primero).
 
 Detalle Fase D: `docs/experiments/2026-09-25_faseD-2c-hcprogrammer-flash.md` + `2026-09-25_faseD-2b2-bl-nordtb-factory.md` + `2026-09-25_faseD-F1-avp-own-research.md`.
