@@ -1,0 +1,55 @@
+--- a/drivers/hcdrivers/virtuart/virtuart.c
++++ b/drivers/hcdrivers/virtuart/virtuart.c
+@@ -34,6 +34,36 @@
+ static wait_queue_head_t virtuart_wq;
+ static int fd;
+ 
++/* 0007 (F2-via3, clase D 2026-09-29): virtuart payload instrumentation.
++ * The AVP overlay trigger travels over this channel (evidence
++ * dmesg-via3.txt 2026-09-29: post-NCM-connect burst of
++ * /dev/virtuart_proxy opens + dis RPCs = the blue overlay paint).
++ * 9003 logs OPEN/IOCTL only; this logs the WRITE payloads (the
++ * notification content) and the READ payloads (the AVP's replies),
++ * plus the process names. Gated like 9003/9004: silent after the
++ * first VU_DBG_MAX entries per direction. */
++#include <linux/atomic.h>
++static atomic_t vu_w_dbg = ATOMIC_INIT(0);
++static atomic_t vu_r_dbg = ATOMIC_INIT(0);
++#define VU_DBG_MAX 400
++static void vu_log(const char *dir, const char *comm,
++		   const char *buf, int len)
++{
++	atomic_t *cnt = (dir[0] == 'w') ? &vu_w_dbg : &vu_r_dbg;
++	char hex[128];
++	int i, n;
++
++	if (atomic_inc_return(cnt) > VU_DBG_MAX)
++		return;
++	n = len < 32 ? len : 32;
++	for (i = 0; i < n; i++)
++		snprintf(hex + 3 * i, 4, "%02x ",
++			 (unsigned char)buf[i]);
++	hex[3 * n] = 0;
++	pr_info("vu_%s[%d] comm=%s sz=%d: %s", dir,
++		atomic_read(cnt), comm, len, hex);
++}
++
+ static void avp_virtuart_pollin(void *arg, unsigned long param)
+ {
+ 	wake_up_interruptible((wait_queue_head_t *)arg);
+@@ -79,6 +109,7 @@
+ 
+ 	ret = avp_read(fd, tmpbuf, sizeof(tmpbuf));
+ 	if (ret > 0) {
++		vu_log("r", current->comm, tmpbuf, ret);
+ 		copy = copy_to_user(buf, tmpbuf, ret);
+ 	}
+ 
+@@ -99,6 +130,7 @@
+ 		else
+ 			l = left;
+ 		ret = copy_from_user(tmpbuf, (void __user *)(buf + copied), l);
++		vu_log("w", current->comm, tmpbuf, l);
+ 		avp_write(fd, tmpbuf, l);
+ 		copied += l;
+ 		left -= l;
