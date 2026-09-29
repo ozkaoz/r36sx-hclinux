@@ -344,3 +344,57 @@ con f_fs en estado armed-TX.
 
 Artefactos: kernel 5adde850 (sin cambios desde v2) · daemon v17 f75f6eaf ·
 busybox-static 0110be2a · fork TreeFrogUI net-mode-app 988c8b6.
+
+## CIERRE FINAL v2 (2026-09-28 noche) — EL SHELL ADB VIVO: builtins ejecutan; el fork externo queda como defecto kernel vendor
+
+### LA CADENA DE ROOT CAUSES COMPLETA (todas confirmadas empiricamente)
+
+1. **ffs IN-writes bloquean hasta que el host consume** (experimento keeper2:
+   CNXN con read pendiente = respuesta cada ciclo; sin read = daemon muerto).
+2. **El ffs vendor IGNORA O_NONBLOCK en AMBAS direcciones** (v22: freeze dentro
+   del write del OKAY; v23: freeze dentro del read de ep_out justo tras el OPEN).
+3. **Solucion: aislamiento total por threads (v24)**: reader/writer/ep0 dedicados
+   que PUEDEN bloquear + loop principal que solo toca pipes/procfs/usleep.
+   v24b fix: fds blocking para sus threads (el O_NONBLOCK heredado mataba al
+   reader con EAGAIN al arranque).
+4. **EL PIPELINE COMPLETO VIVO (v24b/v25, prueba del cat):** OKAY -> feed ->
+   output -> marcador -> CLSE -> adb shell RETORNA.
+5. EL SHELL EJECUTA (v25): adb shell 
+
+5. EL SHELL EJECUTA (v25): adb shell "echo hello" => hello en el PC — comando
+   ejecutado en la consola, output via USB, pantalla limpia, SIN overlay.
+
+### Estado funcional final del shell ADB
+
+- Gadget + transporte + protocolo ADB completo: FUNCIONA (device cada boot)
+- Builtins del shell (echo, printf, cd, test...): FUNCIONA (multi-sesion)
+- Applets externos (id, uname, ls, cat...): COLGADO — fork() dentro del worker
+  ash bajo el gadget ffs live congela al hijo (kernel vendor). Descartados:
+  STANDALONE+NOFORK (id es NOEXEC: forkea igual), FD_CLOEXEC (tabla worker
+  limpia: igual), busybox estatico, todo-RAM.
+- Overlay azul (canal ADB): CERO en todas las sesiones (resultado estable)
+- Overlay NCM: CONFIRMADO PRESENTE (patron ~30s, reverificado 2026-09-28)
+
+### La pista para el fix definitivo (kernel-side)
+
+Asimetria clave: telnetd/NCM forkea+executa perfecto bajo su gadget. Solo el
+ffs rompe los forks. Fork con ffs endpoints vivos + ops pendientes en los
+threads del daemon = hijo congelado. Sospecha: musb portado (9102)/f_fs en
+el camino de copy_process/fdtable con USB activo. Reproduccion 100% fiable:
+adb shell "id" en sesion fresh.
+
+### Alternativa inmediata sin tocar kernel: servicio adb sync (push/pull)
+
+El file-transfer NO requiere forks (puro I/O — el pipeline ya vive). Implementar
+sync: en el daemon = push/pull de archivos SIN overlay y SIN shell — el valor
+restante del canal ADB hoy alcanzable con la arquitectura v26 tal cual.
+
+### Artefactos finales
+
+- Kernel 5adde850 (v2) — fragment: FUNCTIONFS=n + CONFIGFS_F_FS=y
+- min_adbd v26 c94bd39d: threads ffs-isolated + CLOEXEC + worker + marcador
+- busybox-static v3 337253d1: STANDALONE+NOFORK (inofensivo, conservar)
+- adb_mode.sh: RAM shell+applets, wrapper alive-proof, flag adb.mode
+- Fork TreeFrogUI net-mode-app 8f42063
+- PC: registry EnhancedPowerManagementEnabled=0 (R36SX0001); NTKDaemon (Wacom,
+  puerto 5563) = el "emulator-5562" fantasma del server adb (identificado)
