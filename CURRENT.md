@@ -9,9 +9,9 @@ r36sx-hclinux — reproducible Linux/HClinux platform for HiChip consoles (HC16x
 
 ## CURRENT PHASE
 
-**FASE D COMPLETE + 9-6f ADB/FunctionFS: OVERLAY PASS · transporte `adb devices` OK · shell ADB = defecto abierto (ver NEXT EXACT ACTION).**
+**FASE D COMPLETE + 9-6f ADB/FunctionFS: ✅ COMPLETO — shell ADB overlay-free 100% operativo.**
 
-Trabajo FUERA del árbol git (scripts del stack, binarios recompilados) vive en el fork TreeFrogUI (`D:\GitHub\TreeFrogUI`, branch **`net-mode-app`**, commit `8f42063`) — ver AGENTS §15.
+Trabajo FUERA del árbol git (scripts del stack, binarios recompilados) vive en el fork TreeFrogUI (`D:\GitHub\TreeFrogUI`, branch **`net-mode-app`**, commit `1cede76`) — ver AGENTS §15.
 
 ### FASE D — ELIMINACIÓN COMPLETA DE cubegm/ ✅ (2026-09-25)
 
@@ -34,7 +34,7 @@ Trabajo FUERA del árbol git (scripts del stack, binarios recompilados) vive en 
 | 9-6c' | Latencia de display (~10s vs 8s) | ⏳ PENDIENTE |
 | 9-6d | Internet por USB | ✅ F1 PHYSICAL PASS vía PC (ICS); F2 celular PENDIENTE |
 | 9-6e | Red USB / overlay AVP | ✅ DONE (NCM producción, ADR-015) |
-| 9-6f | ADB (FunctionFS) | 🔶 MAYORÍA: **overlay PASS** (cero azul en todas las sesiones ADB) + **transporte completo** (device cada boot) + **shell EJECUTA builtins** (`adb shell "echo hello"` => hello, verificado multi-sesión). Pendiente: applets externos (fork bajo ffs live = kernel vendor; asimetría NCM-forkea-bien apunta al 9102) + servicio sync como alternativa sin kernel |
+| 9-6f | ADB (FunctionFS) | ✅ **COMPLETO — SHELL ADB OVERLAY-FREE 100% OPERATIVO** (echo/uname/free/id/cat/ls/dmesg todos ejecutan; worker por comando v27; sin velo en ninguna condición; transporte estable). Pendientes menores: timeout por comando, servicio sync (push/pull) |
 
 ## CURRENT HEAD
 

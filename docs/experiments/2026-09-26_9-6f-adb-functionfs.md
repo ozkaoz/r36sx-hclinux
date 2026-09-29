@@ -398,3 +398,30 @@ restante del canal ADB hoy alcanzable con la arquitectura v26 tal cual.
 - Fork TreeFrogUI net-mode-app 8f42063
 - PC: registry EnhancedPowerManagementEnabled=0 (R36SX0001); NTKDaemon (Wacom,
   puerto 5563) = el "emulator-5562" fantasma del server adb (identificado)
+
+## CIERRE FINAL v3 — 2026-09-29: SHELL ADB 100% OPERATIVO
+
+El worker por comando (v27, fork 1cede76) cerro el ultimo misterio: el
+" fork freeze de
+
+## CIERRE FINAL v3 — 2026-09-29: SHELL ADB 100% OPERATIVO
+
+El worker por comando (v27, fork 1cede76) cerró el último misterio: el
+"fork freeze" de los applets era el estado del worker persistente tras su
+primer comando (EPIPE en el 2do feed en TODAS las sesiones; el 1er comando
+siempre funcionó). Con un ash fresco por comando TODO ejecuta:
+
+  echo hello / uname -a / free / id / cat /proc/uptime / ls / dmesg
+  — builtins, applets externos y forks, en secuencia, output al PC.
+
+VERIFICACIÓN FÍSICA 2026-09-29 (sesión live):
+  uname: Linux buildroot 5.12.4-release #18 PREEMPT mips GNU/Linux
+  free:  170996 total / 101576 free
+  id:    uid=0(root)
+  dmesg: boot log completo fluyendo
+
+**9-6f: SHELL ADB OVERLAY-FREE COMPLETO.** Sin velo azul en ninguna condición.
+Transporte estable cada boot. Pendientes menores: timeout por comando (un
+comando que cuelgue deja la sesión ocupada hasta B/CNXN), servicio sync
+(push/pull), y capturar el exit-status del worker en el próximo read de SD
+(el log del reap lo tiene — la pista de por qué ash salía tras la 1ra tanda).
