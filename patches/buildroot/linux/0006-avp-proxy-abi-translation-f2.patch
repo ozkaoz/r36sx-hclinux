@@ -1,0 +1,51 @@
+Subject: [PATCH 0006/9006] avp-proxy: F2 ABI translation for the avp-own prebuilt decode handlers
+
+The userspace sends AUDDEC_INIT/VIDDEC_INIT with the 2025-padded sizes
+(632/664); the SDK Jul-2024 prebuilts in the AVP expect the legacy words
+(608/644). The pads are trailing fields, so rewriting the command size
+resizes the forwarded payload correctly in both directions.
+
+Evidence F1c (2026-09-29): avp-own-96h (standalone type + WDT) boots and
+stays alive; kernel boots; logo renders; menu hangs at frogui init - the
+RPC to the decode handlers never answers (word mismatch).
+---
+--- a/drivers/hcdrivers/avp-proxy/avp-proxy.c
++++ b/drivers/hcdrivers/avp-proxy/avp-proxy.c
+@@ -557,6 +557,28 @@
+ 	unsigned long parg_avp = 0;
+ 	int sz = _IOC_SIZE(cmd);
+ 	int dir = _IOC_DIR(cmd);
++	unsigned int fwd_cmd = cmd;
++
++	/* 0006 (F2, clase D 2026-09-29): ABI translation for the avp-own
++	 * prebuilt decode handlers. The userspace (factory libhudi.so +
++	 * our recompiled stack, built against the 2025-padded headers)
++	 * sends AUDDEC_INIT/VIDDEC_INIT with sizes 632/664; the SDK
++	 * Jul-2024 prebuilts in the AVP expect the legacy words 608/644
++	 * (0x82600301/0x82840400). The pads are trailing fields
++	 * (auddec.h:103, vidmp.h:208): the legacy struct == the first
++	 * 608/644 bytes, so rewriting the size resizes the forwarded
++	 * payload correctly in both directions. Only the forwarding word
++	 * changes — the local pre/postproc switches keep matching the
++	 * userspace word. Evidence: F1c boot test 2026-09-29 — the
++	 * avp-own-96h boots and stays alive (standalone type + WDT), the
++	 * kernel boots, the logo renders, and the menu hangs at frogui
++	 * init: the RPC to the decode handlers never answers. */
++	if (cmd == AUDDEC_INIT)
++		fwd_cmd = _IOC(_IOC_DIR(cmd), _IOC_TYPE(cmd), _IOC_NR(cmd),
++			       608);
++	else if (cmd == VIDDEC_INIT)
++		fwd_cmd = _IOC(_IOC_DIR(cmd), _IOC_TYPE(cmd), _IOC_NR(cmd),
++			       644);
+ 
+ 	if (sz > 0) {
+ 		parg_avp = (unsigned long)kzalloc(sz, GFP_KERNEL);
+@@ -579,7 +601,7 @@
+ 		goto err_ret;
+ 	}
+ 
+-	ret = avp_ioctl(fpriv->avp_fd, cmd, parg_avp);
++	ret = avp_ioctl(fpriv->avp_fd, fwd_cmd, parg_avp);
+ 	if (ret < 0) {
+ 		goto err_ret;
+ 	}
