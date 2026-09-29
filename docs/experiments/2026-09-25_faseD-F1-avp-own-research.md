@@ -105,3 +105,70 @@
   (regenerable), mtp_kernel (pre-eliminación). Conservados: k512 (activo),
   SDK maestro, artifacts, avp-build/images. Compactación física del VHDX:
   pendiente (requiere fstrim sudo + diskpart elevado; opcional).
+
+---
+
+# ADDENDUM F1c+F2 (2026-09-29 — clase D retomada: BOOT DEL AVP-OWN RESUELTO; display gap mapeado; pivot a vía 3)
+
+## F1c — el misterio del boot RESUELTO: el TIPO del uImage
+
+mkimage -l del golden reveló: **"MIPS U-Boot Standalone Program"** vs los
+avp-own 96f/96g = **"MIPS Linux Kernel Image"** (el build F1 empaquetó por
+otra vía con el tipo incorrecto; el SDK sí usa -T standalone en
+post-build.sh:156/162). Mismo load/entry 0x8bda4000.
+
+**avp-own-96h** (129f8e2a) = el binario 96g (CONFIG_DRV_WDT=y) reempaquetado
+con la convención exacta de fábrica: **SIN REBOOT-LOOP**. Físico: el kernel
+arranca (S09trace, hcdaemon, rpcwork0-7 vivos a los 00:00:04 — log.txt),
+la pantalla muestra el logo (del bootloader) y la consola permanece viva.
+El WDT ya no mata (el 96g con el feed correcto) y el formato era el
+co-asesino con el timing exacto de F1.
+
+## F2 — traducción ABI implementada (0006/9006)
+
+- Los pads 9001/9002 son **campos finales** (auddec.h:103 [24B],
+  vidmp.h:208 [20B]): el struct legacy == los primeros 608/644 bytes del
+  padded → basta reescribir la palabra de comando; _IOC_SIZE redimensiona
+  el payload en ambas direcciones.
+- Patch 0006 (canonico en patches/buildroot/linux/): fwd_cmd = _IOC(...,608)
+  para AUDDEC_INIT / _IOC(...,644) para VIDDEC_INIT en avp_ioctl_unl (solo
+  el reenvio; los switches locales siguen matcheando la palabra del userspace).
+- Aplicado al arbol + rebuild: kernel 722ce8ce (TOOLCHAIN+PATCH PASS).
+- **REGLA CRITICA aprendida**: kernel F2 + AVP golden INCOMPATIBLES (el golden
+  ESPERA 632/664 de fabrica; el F2 reenviaria 608/644). El rollback SIEMPRE
+  debe restaurar AMBOS archivos juntos.
+
+## F2-test fisico: el menu no llega — crash-loop del frogui
+
+- frogui_crash.log (41.764 B): **retro_init complete x133** — el frontend
+  inicializa COMPLETO (render_init, scan_directory, theme...) y cruza al
+  momento de renderizar el menu → el supervisor lo relanza → loop.
+- picoarch_init.log: instancias repetidas con **geometrias fb corruptas**
+  (v640x11040 bpp=16!) — los ioctls hcfb devuelven exito con valores basura.
+- game_history.txt: ultima entrada con paths cubegm (era del boot-resume).
+
+## CONCLUSION (la frontera exacta)
+
+El gap NO era solo la ABI de 2 comandos: **el stack de display de fabrica
+depende de los servicios de composicion/fb del avp-custom** (fork interno
+linsen.chen E3100_R36, fuente NO en el SDK) que el avp-own del SDK no
+replica. El menu nunca renderiza con el avp-own. Boot: RESUELTO. Display:
+bloqueado en compatibilidad de servicios.
+
+## LAS 3 VIAS RESTANTES (eleccion: via 3)
+
+1. **Patch binario del golden** — RE dirigido del trigger del azul (firma
+   06 f2 / rgb:ff0000ff / ~30s) + NOPs. Conserva TODO el stack de fabrica.
+2. **Completar el display del avp-own** — RE de los servicios fb del golden
+   o reescribir el userspace de display. Multi-sesion, alto costo.
+3. **[ELEGIDA] Cazar el canal de monitoreo** — el avp-custom detecta el
+   networking por ALGUN canal (amprpc/memoria compartida/hcdaemon). El
+   patch 9003 (amprpc_dbg) YA vive en el kernel desplegado 5adde850:
+   sesion NCM + overlay activo + dmesg | grep amprpc → identificar el RPC
+   del trigger → patch kernel que presenta estado "sin red" al AVP.
+
+## Rollback ejecutado (2026-09-29)
+
+kernel 5adde850 + AVP golden a9788995 + adb.mode (canal ADB completo) =
+known-good verificado. Backups en boot/: prev-5adde.bak, golden.bak,
+prev-96f.bak (c6e3cc70), prev-d3.bak.

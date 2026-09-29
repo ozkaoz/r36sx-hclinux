@@ -72,7 +72,10 @@ e3211b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 
 ## NEXT EXACT ACTION
 
-1. **9-6f shell (defecto abierto) — diagnóstico definitivo vía NCM**: quitar `adb.mode` de la SD → NETWORK (NCM) → `telnet 192.168.137.2` → **con la consola en sesión adb (gadget live + server conectado)** verificar el estado del worker: `cat /proc/<pid>/stat /proc/<pid>/wchan /proc/<pid>/status` → R/S/D decide: D = bloqueo kernel (musb 9102 audit), S = wakeup roto, R = starvation. Capturar también los logs v16/v17 de la SD.
+1. **Clase D — VÍA 3: cazar el canal de monitoreo del overlay.** El avp-custom detecta el networking por un canal desconocido (amprpc/memoria compartida/hcdaemon). El patch 9003 (amprpc_dbg) YA está en el kernel desplegado 5adde850. Procedimiento: quitar adb.mode → boot → NETWORK (NCM) → telnet → `dmesg | grep -i amprpc` capturado ANTES de los ~30s del trigger y DESPUÉS → diff → el RPC/notificación del trigger identificada → patch kernel (spoof "sin red" hacia el AVP mientras la red funciona).
+2. Vías alternativas documentadas: patch binario del golden (RE dirigido del trigger) · completar display del avp-own (multi-sesión).
+3. **9-6f menores**: timeout por comando ya en v28 · sync push/pull verificado · interactive shell si algún día se desea.
+4. 9-6d F2 (celular) · AVP-own display (pausado en F2-display-gap) · 5.15 LTS audit.
 2. **9-6d vía celular**: drivers `USB_USBNET/CDCETHER/RNDIS_HOST` como .ko YA en el kernel `0b549b84`: insmod + udhcpc contra el teléfono.
 3. **Shell de producción YA disponible**: NCM/telnet (ADR-015) — para trabajo real usar NCM mientras el shell ADB se debuggea.
 4. PARA DESPUÉS (clase D, GO explícito): firmware AVP propio (elimina el overlay en el transporte NCM).
