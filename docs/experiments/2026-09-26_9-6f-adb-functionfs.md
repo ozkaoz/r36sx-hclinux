@@ -425,3 +425,27 @@ Transporte estable cada boot. Pendientes menores: timeout por comando (un
 comando que cuelgue deja la sesión ocupada hasta B/CNXN), servicio sync
 (push/pull), y capturar el exit-status del worker en el próximo read de SD
 (el log del reap lo tiene — la pista de por qué ash salía tras la 1ra tanda).
+
+## CIERRE FINAL v4 — 2026-09-29: TODOS LOS PENDIENTES MENORES CERRADOS
+
+v28 (fork 5c22108, daemon 41a07408) completa el canal ADB al 100%:
+
+1. **adb pull — PHYSICAL PASS**: NET_MODE_DEBUG.log (2695 B) de la SD al PC
+   en 33 ms, contenido íntegro (verificado).
+2. **adb push — PHYSICAL PASS**: push-test.txt del PC a la SD, contenido
+   verificado de vuelta via `adb shell cat /mnt/sdcard/push-test.txt`.
+3. **Timeout por comando (30 s)**: un comando colgado se reapea + CLSE —
+   la sesión se auto-recupera.
+4. **Worker exit-status capturado**: status=0x0 — el ash sale LIMPIAMENTE
+   (voluntariamente) tras su primera tanda de comandos (comportamiento del
+   ash con stdin pipe no-tty). Académico: el ciclo por comando lo neutraliza.
+
+**Guía de paths**: adb push/pull = rutas relativas a la SD (/x = /mnt/sdcard/x);
+adb shell = rutas absolutas del sistema (/mnt/sdcard/x).
+
+## 9-6f: CANAL ADB COMPLETO — shell root + transferencia de archivos,
+## overlay-free, USB estándar desde cualquier PC sin configurar nada.
+
+Artefacto final: daemon v28 41a07408 · busybox-static v3 337253d1 ·
+adb_mode.sh (RAM shell+applets) · kernel 5adde850 (sin cambios desde v2) ·
+fork TreeFrogUI net-mode-app 5c22108.

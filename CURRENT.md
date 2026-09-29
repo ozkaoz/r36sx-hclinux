@@ -34,7 +34,7 @@ Trabajo FUERA del árbol git (scripts del stack, binarios recompilados) vive en 
 | 9-6c' | Latencia de display (~10s vs 8s) | ⏳ PENDIENTE |
 | 9-6d | Internet por USB | ✅ F1 PHYSICAL PASS vía PC (ICS); F2 celular PENDIENTE |
 | 9-6e | Red USB / overlay AVP | ✅ DONE (NCM producción, ADR-015) |
-| 9-6f | ADB (FunctionFS) | ✅ **COMPLETO — SHELL ADB OVERLAY-FREE 100% OPERATIVO** (echo/uname/free/id/cat/ls/dmesg todos ejecutan; worker por comando v27; sin velo en ninguna condición; transporte estable). Pendientes menores: timeout por comando, servicio sync (push/pull) |
+| 9-6f | ADB (FunctionFS) | ✅ **COMPLETO + PULL/PUSH — canal ADB total**: shell root (todos los comandos, worker por comando) + `adb pull`/`adb push` (SD↔PC, verificados físicamente) + timeout 30s auto-recuperación + overlay CERO en todas las condiciones. Guía: paths adb = relativos a SD; paths shell = absolutos |
 
 ## CURRENT HEAD
 
