@@ -2,6 +2,10 @@
 
 Formato: una línea por iteración; detalle técnico en `docs/experiments/` y commits.
 
+## 2026-09-30
+
+- **Iteración FASE E PLANIFICADA (2026-09-30 — Clase A docs, directiva usuario):** ROADMAP: nueva **Fase E — kernel switcher stock↔propio para usuario final** — `to-own-kernel`/`to-stock-kernel` con backup automático, SHA256, gestión de rollback y NOR opcional: el usuario con SO stock + TreeFrogUI + boot stock cambia fácilmente a nuestro kernel y vuelve al stock con facilidad. Efectivable ya — insumos 100% verificados: kernel 5.12.4 CLEAN PHYSICAL PASS + DTB `116ddf26` + ADR-012 (ABI userspace fábrica), goldens stock (`53b3e0b3`/`1258f1eb`/`a9788995`), kits HCProgrammer own + factory-restore (PHYSICAL PASS 2026-09-21), BootROM-USB recovery permanente, patrón `.prev-*.bak` probado en SD. Gates: regla de simetría (vuelta a stock ANTES de la ida), CLEAN-INSTALL PHYSICAL PASS sobre SD stock, compatibilidad userspace stock NO asumida (experimento dedicado). CURRENT.md sincronizado (fase + NEXT directiva).
+
 ## 2026-09-29
 - **Iteración INTERNET VIA ADB REVERSE (2026-09-29 — 6 root causes cazados; reverse al 90%):** Objetivo: internet overlay-free vía `adb reverse`. Seis bugs identificados y corregidos: (1) separador `;` no espacio (trace adb), (2) bind `INADDR_ANY` (lo está DOWN → EADDRNOTAVAIL), (3) confirmación WRTE "OKAY" 4 bytes + CLSE (formato smart-socket), (4) NO setear have_stream en reverse (el timeout 30s mataba el listener), (5) NO liberar streams reverse en worker_teardown (el CLSE del host los mataba), (6) CRC del OPEN device→host (data_check=0 → posible rechazo silencioso). **ESTADO FÍSICO**: `adb reverse` completa, listener en puerto 1080 sobrevive, conexiones TCP aceptadas, OPEN enviado al host. **PENDIENTE**: el ADB server del PC no procesa el OPEN device→host para crear el relay de datos (último eslabón del túnel). Artefacto: daemon v29-CRC `965d0372` desplegado en SD. Alternativa si el reverse estándar no funciona: túnel custom por stream shell.
 

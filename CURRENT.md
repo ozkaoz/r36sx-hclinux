@@ -1,6 +1,6 @@
 # CURRENT.md — Operational Snapshot (CACHE — Git is the truth)
 
-**Updated:** 2026-09-26 (9-6f ADB/FunctionFS implementado — kernel `0b549b84` BUILD PASS, deploy/test físico pendientes)
+**Updated:** 2026-09-30 (Fase E kernel switcher stock↔propio PLANIFICADA — física sin cambios: consola 100% operativa con kernel propio + boot desde /boot/)
 **Rule:** small snapshot, no history. No changelog.
 
 ## PROJECT
@@ -10,6 +10,8 @@ r36sx-hclinux — reproducible Linux/HClinux platform for HiChip consoles (HC16x
 ## CURRENT PHASE
 
 **9-6f ADB: shell + push/pull + overlay-free COMPLETO. Clase D: avp-own boot RESUELTO (display gap). Internet vía ADB reverse: AL 90% — 6 fixes, listener funciona, falta el relay de datos del host.**
+
+**FASE E PLANIFICADA (2026-09-30 — directiva usuario): kernel switcher stock↔propio para el usuario final** — `to-own-kernel` / `to-stock-kernel` con backup automático, SHA256 y camino de vuelta garantizado. Regla de simetría: E2+E3 (vuelta a stock) ANTES que E1 (ida). Detalle: `docs/ROADMAP.md` §Fase E.
 
 Trabajo FUERA del árbol git (scripts del stack, binarios recompilados) vive en el fork TreeFrogUI (`D:\GitHub\TreeFrogUI`, branch **`net-mode-app`**, commit `8c049a7`) — ver AGENTS §15.
 
@@ -71,6 +73,8 @@ e3211b41f8d649c7d7838f7f19b8cca5cf30ba6cb1ff9545be6943845fbf8d5d — HiChip SDK
 - **NINGUNO** — Fase D completa, consola 100% operativa sin cubegm/.
 
 ## NEXT EXACT ACTION
+
+**Directiva actual (2026-09-30) — FASE E kernel switcher:** implementar E3 (gestión de rollback + manifiesto SHA256) → E2 (`to-stock-kernel`) → E1 (`to-own-kernel` sobre consola stock) → CLEAN-INSTALL PHYSICAL PASS sobre SD stock. Ver `docs/ROADMAP.md` Fase E.
 
 1. **Internet vía ADB reverse — EL ÚLTIMO ESLABÓN:** el ADB server del PC no procesa el OPEN device→host. Deploy del CRC fix (`965d0372` en SD, listo) → test. Si el CRC no es la causa → debug del device-initiated OPEN en el ADB server o alternativa: túnel custom por stream shell (sin device-initiated OPENs, más lento pero seguro).
 2. **Velo azul NCM:** PERMANENTE con el golden AVP (hcdaemon inocente, virtuart inocente, fb_clear insuficiente). Vía restante: patch binario del golden (RE dirigido del trigger) o display del avp-own (multi-sesión).
