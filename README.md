@@ -36,6 +36,25 @@ frogui/     → icons, skins
 picoarch/   → configs
 ```
 
+## Kernel switcher (Fase E — in progress)
+
+Scripts to switch a console between OUR kernel and the stock kernel (end-user facing):
+
+```bash
+# Install OUR kernel+DTB on a stock console SD (auto-backup of the user's boot + SHA256 + rollback point)
+./scripts/kernel_to_own.sh --sd /mnt/g --bundle-dir <dir-with-vmlinux.uImage+dtb.bin>
+
+# Return to the stock/previous kernel (user backup -> snapshot -> verified factory goldens)
+./scripts/kernel_to_stock.sh --sd /mnt/g
+
+# Read-only status: layout, hashes vs goldens, backups inventory
+./scripts/kernel_switch_status.sh --sd /mnt/g
+```
+
+- Works on both boot layouts: stock bootloader reads `cubegm/`, our NOR bootloader (Fase D) reads `boot/` — auto-detected, **no NOR flash required**.
+- Never touches NOR/AVP (AVP only with explicit `--avp`). Factory goldens pinned in `manifests/GOLDEN_STOCK.sha256`.
+- HOST PASS 56/56 (`tests/kernel_switch_selftest.sh`); physical CLEAN-INSTALL validation pending. Details: `docs/ROADMAP.md` §Fase E.
+
 ## Quick Start
 
 ```bash

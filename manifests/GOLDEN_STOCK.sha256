@@ -1,0 +1,13 @@
+# Goldens stock R36SX V2.6 — Fase E (verificados 2026-09-30)
+# BASE CANÓNICA (directiva usuario 2026-09-30): "R36SX V2.6 (0712) Minimal Backup" (Desktop)
+#   /mnt/c/Users/DaFunkNoise/Desktop/Instalación Base TREEFROG/R36SX V2.6 (0712) Minimal Backup/cubegm/
+#   — SO stock completo; los 3 archivos son byte-idénticos a estos hashes (verificado 2026-09-30).
+# Evidencia cruzada:
+#   vmlinux.uImage — == /mnt/d/R36SX/staging/vmlinux.uImage-STOCK-53B3E0B3 (kernel stock 4.4.186)
+#   dtb.bin / avp.uImage — == /mnt/d/R36SX/sd-state-preserved_2026-09-10_0209/cubegm/
+#   avp.uImage — == G:/boot/avp.uImage.golden.bak == G:/boot/avp.uImage (AVP fábrica en uso)
+# Copia verificada: /mnt/d/R36SX/goldens-stock/
+# NOTA: sd-state-preserved/cubegm/vmlinux.uImage (465d5fbd) NO es el kernel stock — el golden de kernel es el de staging.
+53b3e0b3d57fcdbef40d448ae2d3a00159bc84f2fd5be4c10a826827c7f2e01e  vmlinux.uImage
+1258f1eba809e43540c581b815c87815540a9e5897a4e8584363ab7de5cc27bb  dtb.bin
+a9788995db80197db6d743b8b237eadbfd3c424fcf1ab448fcd99c003b0950b2  avp.uImage

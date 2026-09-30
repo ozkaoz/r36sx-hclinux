@@ -194,3 +194,16 @@ Formato ADR. STATUS: ACTIVE | SUPERSEDED | DEPRECATED. No registrar aquí nada m
 - **CONSEQUENCES:** dispatcher del fork default → NCM (`net-mode-app` `66a3cbe`); PPP/SLIP del kernel + pppd del rootfs se RETIENEN como experimentales (el kernel desplegado `e07844bd` los incluye — inofensivos sin uso); UX: la entrada NETWORK implica sesión con capa azul hasta reboot (la UI ya muestra confirmación previa). Reabrir la línea AVP propio solo con GO explícito del usuario.
 - **EVIDENCE:** `docs/experiments/2026-09-24_9-6e-ppp-slip.md`; `docs/experiments/2026-09-24_usb-networking-blue-overlay.md` (+ addendum refutación PPP); logs SD `PPP_DEBUG.log`/`NET_MODE_DEBUG.log`/`USB_MODE_INVOKE.log`; reporte físico del usuario 2026-09-24.
 - **RELATED:** AGENTS §15 (stack-upstream); fork TreeFrogUI `net-mode-app` `66a3cbe`.
+
+
+## ADR-016 — Bases canónicas del kernel switcher: stock = Minimal Backup (Desktop); propio = SD viva; goldens verificados por hash contra el manifiesto del repo
+
+- **DATE:** 2026-09-30
+- **STATUS:** ACTIVE
+- **SCOPE:** Fase E — kernel switcher stock↔propio para usuario final (E1–E3).
+- **CONTEXT:** la fase requiere referencias fijas para (a) instalar nuestro kernel sobre consolas stock y (b) volver al stock. Existían múltiples copias de archivos stock con hashes divergentes (p.ej. sd-state-preserved 2026-09-10 tiene kernel `465d5fbd` ≠ stock `53b3e0b3`). El usuario declaró (2026-09-30) las bases: SO stock = "R36SX V2.6 (0712) Minimal Backup" (Desktop) y SO propio = SD viva de la consola.
+- **DECISION:** (1) **Base stock canónica** = Desktop "R36SX V2.6 (0712) Minimal Backup/cubegm" — verificada byte-idéntica a los goldens históricos (kernel `53b3e0b3`, dtb `1258f1eb`, avp `a9788995`); fallback `/mnt/d/R36SX/goldens-stock/`. (2) **Base propia canónica** = SD viva (`/mnt/g/boot`). (3) El repo fija los hashes golden en `manifests/GOLDEN_STOCK.sha256` — TODO restore golden se verifica contra ese manifiesto ANTES de escribir (un golden adulterado se RECHAZA). (4) La vuelta a stock usa prioridad: backup del usuario (`kernel-switch/orig`) > snapshot (`--from-set`) > goldens (con AVISO de fábrica).
+- **RATIONALE:** evidencia física 2026-09-30: los 3 archivos del Minimal Backup son byte-idénticos a los goldens preservados (staging + sd-state-preserved + `G:/boot/avp.uImage.golden.bak`); el hash ancla la identidad del stock frente a copias divergentes.
+- **CONSEQUENCES:** `KS_STOCK_BASE_DEFAULT`/`KS_OWN_BASE_DEFAULT` en `scripts/kernel_switch_lib.sh` apuntan a las bases canónicas (override por env para tests); `manifests/GOLDEN_STOCK.sha256` es contrato del gate de E2; copias divergentes NO se usan como fuente golden. Hallazgo asociado: `sha256sum -c` ignora líneas mal formateadas → la verificación de backups es estricta por-archivo (hex-64) además de `-c`.
+- **EVIDENCE:** hashes verificados 2026-09-30 (Minimal Backup cubegm == staging `vmlinux.uImage-STOCK-53B3E0B3` == sd-state-preserved {dtb,avp} == `G:/boot/avp.uImage.golden.bak`); `tests/kernel_switch_selftest.sh` T13/T14 (golden verificado/adulterado).
+- **RELATED:** `docs/ROADMAP.md` §Fase E; `scripts/kernel_to_own.sh`; `scripts/kernel_to_stock.sh`.

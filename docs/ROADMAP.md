@@ -20,7 +20,7 @@ BootROM → DDR-init (fábrica) → **bootloader propio (fábrica + path-prefix 
 | **8. Rootfs propio** | Buildroot + clean install | ✅ DONE (sin SHIM — boot directo desde /boot/) |
 | **D. Boot propio + eliminar cubegm/** | Bootloader en NOR con path-prefix "boot" + cubegm/ 100% eliminado | ✅ **COMPLETE** (2026-09-25) |
 | **9. Kernel 5.12.4** | Upgrade desde 4.4.186 known-good | ✅ DONE — CLEAN PHYSICAL PASS |
-| **E. Kernel switcher stock ↔ propio** | Usuario final: cambiar fácilmente al kernel propio desde SO/boot stock, y volver al stock | ⏳ **PLANIFICADA** (2026-09-30) |
+| **E. Kernel switcher stock ↔ propio** | Usuario final: cambiar fácilmente al kernel propio desde SO/boot stock, y volver al stock | 🔶 **EN CURSO** — E1–E3 DONE (HOST PASS 56/56); física pendiente |
 
 ## Fase D — COMPLETE ✅
 
@@ -50,7 +50,7 @@ BootROM → DDR-init (fábrica) → **bootloader propio (fábrica + path-prefix 
 | **9-6b'** | Reconciliación DTB | ⏳ PENDIENTE |
 | **9-6c'** | Latencia de display (~10s vs 8s) | ⏳ PENDIENTE |
 
-## **Fase E — Kernel switcher: stock ↔ propio (usuario final)** ⏳ PLANIFICADA (2026-09-30)
+## **Fase E — Kernel switcher: stock ↔ propio (usuario final)** 🔶 EN CURSO (2026-09-30)
 
 **Objetivo (directiva del usuario, 2026-09-30):** que un usuario final con el SO stock + TreeFrogUI y el boot stock pueda **cambiar fácilmente a nuestro kernel propio** y **volver al kernel stock con facilidad** — vía scripts reproducibles con backup automático, verificación SHA256 y camino de vuelta garantizado. Sin flash obligatorio cuando la vía SD-only alcance; NOR solo como opción documentada.
 
@@ -65,9 +65,9 @@ BootROM → DDR-init (fábrica) → **bootloader propio (fábrica + path-prefix 
 
 | Sub | Ítem | Estado |
 |---|---|---|
-| **E1** | `to-own-kernel` — sobre consola stock: backup automático de SUS archivos de boot → instalar kernel + DTB propios en el layout que SU bootloader espera (`boot/` con NOR propio vía kit own; `cubegm/` con bootloader stock, SIN flash) → SHA256 + punto de rollback | ⏳ |
-| **E2** | `to-stock-kernel` — volver al kernel stock: restaurar goldens (kernel `53b3e0b3` + DTB `1258f1eb`; AVP fábrica `a9788995` solo si fue reemplazado) o el backup del usuario; verificación pre/post | ⏳ |
-| **E3** | Gestión de rollback: rotación de backups `.prev`/`.bak` + manifiesto SHA256 de archivos de boot + verificación automática pre/post escritura | ⏳ |
+| **E1** | `scripts/kernel_to_own.sh` — sobre consola stock: backup automático de SUS archivos de boot → instalar kernel + DTB propios en el layout que SU bootloader espera (`boot/` con NOR propio vía kit own; `cubegm/` con bootloader stock, SIN flash) → SHA256 + punto de rollback | ✅ DONE (HOST PASS) |
+| **E2** | `scripts/kernel_to_stock.sh` — volver al kernel stock: prioridad `kernel-switch/orig` (backup del primer uso) → `--from-set` (snapshot) → base golden verificada contra `manifests/GOLDEN_STOCK.sha256` (kernels de FÁBRICA, con AVISO); verificación pre/post | ✅ DONE (HOST PASS) |
+| **E3** | `scripts/kernel_switch_lib.sh` + `kernel_switch_status.sh` — gestión de rollback: recovery point `orig/` (nunca rotado) + snapshots `sets/` (rotación 3) + manifiestos SHA256 verificados pre/post escritura | ✅ DONE (HOST PASS) |
 | **E4** | NOR opcional (wrapper de kits probados): flashear bootloader propio (layout `boot/`) / restaurar NOR 100% fábrica (layout `cubegm/`) | ⏳ |
 | **E5** | UX usuario final: vía de ejecución (script PC con SD montada / modo consola), guía paso a paso, matriz de riesgo + garantía anti-brick documentada | ⏳ |
 
@@ -79,6 +79,8 @@ BootROM → DDR-init (fábrica) → **bootloader propio (fábrica + path-prefix 
 - E4 = **Clase D+F**: autorización hardware explícita; solo con dump NOR previo (`scripts/nor_dump.sh`) y BootROM-USB verificado.
 - Cada script cumple AGENTS §5: identificar dispositivo → mostrar info → confirmar tamaño/modelo/mounts → autorización → escribir. La SD stock original del usuario es golden: solo se tocan los archivos de boot del switch documentado.
 - E5 completa `docs/RECOVERY.md` (contrato PENDIENTE) con el procedimiento verificado.
+
+**Implementado (2026-09-30 — E1–E3):** `scripts/kernel_to_own.sh` · `kernel_to_stock.sh` · `kernel_switch_status.sh` + lib común (`kernel_switch_lib.sh`: escritura atómica tmp+rename+hash, contrato §5) y `tests/kernel_switch_selftest.sh` — **HOST PASS 56/56** (18 casos: corrupción de backup, golden adulterado, layouts cubegm/boot, `--avp`, rotación, idempotencia, `--from-set`, dry-run). Dry-runs verificados contra la SD real (read-only, cero escrituras). Bases canónicas fijadas (ADR-016): STOCK = Desktop "R36SX V2.6 (0712) Minimal Backup" (byte-idéntico a los goldens) · PROPIO = SD viva. **Hallazgo selftest:** `sha256sum -c` ignora silenciosamente líneas con formato inválido (exit 0 con hash corrupto) → verificación estricta por-archivo (hex-64) ANTES de `-c` y de escribir. shellcheck no disponible en WSL (PEP 668/sin sudo) — gate cumplido con `bash -n` + selftest funcional. **Pendiente físico:** CLEAN-INSTALL PHYSICAL PASS sobre SD/consola stock (autorización F).
 
 ## **Punto de decisión (post 9-6): kernel 5.12.4 a máximo desarrollo**
 
