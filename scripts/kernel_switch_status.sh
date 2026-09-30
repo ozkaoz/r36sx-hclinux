@@ -45,6 +45,7 @@ fi
 if [ -d "$(ks_folders_dir "$SD")" ]; then
   for fb in "$(ks_folders_dir "$SD")"/*/; do
     [ -d "$fb" ] || continue
+    fb="${fb%/}"
     name="$(basename "$fb")"
     nf="$(find "$fb" -type f 2>/dev/null | wc -l)"
     if [ -f "$fb.manifest.sha256" ]; then
