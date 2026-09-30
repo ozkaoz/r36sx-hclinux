@@ -68,7 +68,7 @@ BootROM → DDR-init (fábrica) → **bootloader propio (fábrica + path-prefix 
 | **E1** | `scripts/kernel_to_own.sh` — sobre consola stock: backup automático de SUS archivos de boot → instalar kernel + DTB propios en el layout que SU bootloader espera (`boot/` con NOR propio vía kit own; `cubegm/` con bootloader stock, SIN flash) → SHA256 + punto de rollback | ✅ DONE (HOST PASS) |
 | **E2** | `scripts/kernel_to_stock.sh` — volver al kernel stock: prioridad `kernel-switch/orig` (backup del primer uso) → `--from-set` (snapshot) → base golden verificada contra `manifests/GOLDEN_STOCK.sha256` (kernels de FÁBRICA, con AVISO); verificación pre/post | ✅ DONE (HOST PASS) |
 | **E3** | `scripts/kernel_switch_lib.sh` + `kernel_switch_status.sh` — gestión de rollback: recovery point `orig/` (nunca rotado) + snapshots `sets/` (rotación 3) + manifiestos SHA256 verificados pre/post escritura | ✅ DONE (HOST PASS) |
-| **E4** | NOR opcional (wrapper de kits probados): flashear bootloader propio (layout `boot/`) / restaurar NOR 100% fábrica (layout `cubegm/`) | ⏳ |
+| **E4** | **MODO CARPETA** (`--folder`): `boot/` ↔ `cubegm/` (SISTEMA stock completo, 502MB, verificación total + par vs goldens) con **PASO NOR impreso** (kits factory-restore / own-v3 probados) — el flash es físico (GUI HCProgrammer + ventana BootROM) | ✅ DONE (HOST PASS 84/84) — físico pendiente |
 | **E5** | UX usuario final: vía de ejecución (script PC con SD montada / modo consola), guía paso a paso, matriz de riesgo + garantía anti-brick documentada | ⏳ |
 
 **Gates y validación:**

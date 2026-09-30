@@ -65,25 +65,27 @@ ks_detect_layout() { # $1=sd → boot | cubegm (EXACTAMENTE uno de los dos)
 
 ks_state_dir() { printf '%s/%s\n' "$1" "$KS_STATE_DIR"; }
 
-ks_state_read() { # $1=sd → setea KS_STATE / KS_STATE_LAYOUT / KS_ORIG_BACKUP
+ks_state_read() { # $1=sd → setea KS_STATE / KS_STATE_LAYOUT / KS_ORIG_BACKUP / KS_STATE_MODE
   local sf v
   sf="$(ks_state_dir "$1")/state"
-  KS_STATE="unknown"; KS_STATE_LAYOUT="-"; KS_ORIG_BACKUP="no"
+  KS_STATE="unknown"; KS_STATE_LAYOUT="-"; KS_ORIG_BACKUP="no"; KS_STATE_MODE="file"
   if [ -f "$sf" ]; then
     v="$(sed -n 's/^STATE=//p' "$sf" | tail -n1)"; if [ -n "$v" ]; then KS_STATE="$v"; fi
     v="$(sed -n 's/^LAYOUT=//p' "$sf" | tail -n1)"; if [ -n "$v" ]; then KS_STATE_LAYOUT="$v"; fi
+    v="$(sed -n 's/^MODE=//p' "$sf" | tail -n1)"; if [ -n "$v" ]; then KS_STATE_MODE="$v"; fi
     v="$(sed -n 's/^ORIG_BACKUP=//p' "$sf" | tail -n1)"; if [ -n "$v" ]; then KS_ORIG_BACKUP="$v"; fi
   fi
   return 0
 }
 
-ks_state_write() { # $1=sd $2=STATE
+ks_state_write() { # $1=sd $2=STATE $3=MODE(file|folder — default file)
   local d
   d="$(ks_state_dir "$1")"
   mkdir -p "$d"
   {
     printf 'STATE=%s\n' "$2"
     printf 'LAYOUT=%s\n' "$(ks_detect_layout "$1")"
+    printf 'MODE=%s\n' "${3:-file}"
     printf 'ORIG_BACKUP=%s\n' "$(if [ -d "$d/orig" ]; then echo yes; else echo no; fi)"
     printf 'UPDATED=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     printf 'VERSION=%s\n' "$KS_VERSION"
@@ -271,11 +273,17 @@ ks_show_info() { # $1=sd $2=layout
   ks_state_read "$sd"
   echo "--- SD: $sd ---"
   dev="$(findmnt -T "$sd" -no SOURCE 2>/dev/null | head -n1)"
-  echo "dispositivo: ${dev:-(sin info de mount)} | layout: $layout/ | estado switcher: $KS_STATE (backup original: $KS_ORIG_BACKUP)"
+  echo "dispositivo: ${dev:-(sin info de mount)} | layout: $layout/ | estado switcher: $KS_STATE (modo $KS_STATE_MODE, backup original: $KS_ORIG_BACKUP)"
   for f in vmlinux.uImage dtb.bin avp.uImage; do
     printf '  %s: %s\n' "$f" "$(ks_describe_file "$sd/$layout/$f")"
   done
 }
+
+# ---------- modo CARPETA (boot/ ↔ cubegm/ — consola NOR propio ↔ NOR fábrica) ----------
+# Evidencia Fase D (boot-2): el bootloader del NOR lee SU path-prefix EXCLUSIVAMENTE
+# (propio: "boot"; fábrica: "cubegm") — sin fallback. El swap de carpeta REQUIERE el
+# flash NOR correspondiente (kits HCProgrammer probados) — los scripts lo dejan
+# preparado e imprimen los pasos; el flash es físico (GUI Windows + ventana BootROM).
 
 ks_confirm() { # $1=prompt — KS_YES=1 salta la pregunta
   local a
@@ -285,4 +293,79 @@ ks_confirm() { # $1=prompt — KS_YES=1 salta la pregunta
     y|Y|yes|YES|s|S|si|SI) return 0 ;;
     *) echo "Cancelado."; exit 1 ;;
   esac
+}
+
+ks_folders_dir() { printf '%s/folders\n' "$(ks_state_dir "$1")"; }
+
+ks_folder_manifest_to() { # $1=dir $2=dest_manifest_file — manifiesto de TODOS los archivos (relativo a dir)
+  ( cd "$1" && find . -type f -print0 | sort -z | xargs -0 sha256sum ) > "$2"
+}
+
+ks_folder_ok() { # $1=dir → 0 si $1.manifest.sha256 (al lado) verifica
+  local dir="$1"
+  if [ ! -d "$dir" ]; then return 1; fi
+  if [ ! -f "$dir.manifest.sha256" ]; then return 1; fi
+  ( cd "$dir" && sha256sum -c "$dir.manifest.sha256" ) >/dev/null 2>&1
+}
+
+ks_folder_backup() { # $1=carpeta $2=dest_dir — MUEVE (rename mismo volumen) + manifest al lado
+  local src="$1" dest="$2"
+  if [ ! -d "$src" ]; then ks_die "carpeta a respaldar inexistente: $src"; fi
+  if [ -e "$dest" ]; then ks_die "destino de backup ya existe: $dest"; fi
+  mkdir -p "$(dirname "$dest")"
+  mv "$src" "$dest" || ks_die "fallo moviendo $src -> $dest"
+  ks_folder_manifest_to "$dest" "$dest.manifest.sha256" || ks_die "manifest del backup falló: $dest"
+  sync
+  ks_log "carpeta respaldada (move+manifest): $src -> $dest"
+}
+
+ks_folder_install() { # $1=src_folder $2=dest_folder — cp -a + rename + verificación TOTAL contra el origen
+  local src="$1" dest="$2" tmp mf
+  if [ ! -d "$src" ]; then ks_die "carpeta fuente inexistente: $src"; fi
+  if [ -e "$dest" ]; then ks_die "el destino ya existe: $dest (respaldar primero)"; fi
+  tmp="$dest.tmp.$$"
+  mf="$dest.manifest.sha256.tmp.$$"
+  ks_log "copiando carpeta: $src -> $dest (verificación total al final — puede tardar)"
+  cp -a "$src" "$tmp" || { rm -rf "$tmp"; rm -f "$mf"; ks_die "copia falló: $src"; }
+  ks_folder_manifest_to "$tmp" "$mf" || { rm -rf "$tmp"; rm -f "$mf"; ks_die "manifest de la copia falló: $tmp"; }
+  if ( cd "$src" && sha256sum -c "$mf" ) >/dev/null 2>&1; then :; else
+    rm -rf "$tmp"; rm -f "$mf"
+    ks_die "verificación de la copia falló (hashes difieren del origen): $src"
+  fi
+  mv -f "$tmp" "$dest" || { rm -rf "$tmp"; rm -f "$mf"; ks_die "rename falló: $dest"; }
+  mv -f "$mf" "$dest.manifest.sha256" || ks_die "no se pudo situar el manifest: $dest.manifest.sha256"
+  sync
+  ks_log "carpeta instalada y verificada: $dest"
+}
+
+ks_print_nor_steps() { # $1 = stock|own — pasos del flash NOR (físico, kits probados)
+  if [ "$1" = "stock" ]; then
+    cat <<'EOF'
+
+PASO NOR OBLIGATORIO (físico ~2 min — método probado 2026-09-21, LEEME-RESTAURACION v3):
+  1. PC: ejecutar como ADMINISTRADOR:  D:\R36SX\hcprogrammer-restore-kit\HCProgrammer.exe
+  2. Cargar proyecto:                  D:\R36SX\hcprogrammer-restore-kit\hcprog.ini
+  3. Firmware:                         D:\R36SX\hcprogrammer-restore-kit\HCFOTA-factory-restore.bin
+     (NOR 100% fábrica — bootloader lee cubegm/)
+  4. Tool ESCUCHANDO antes de encender; consola APAGADA conectada por USB-C
+  5. ENCENDER la consola — ventana BootROM ~300ms tras el encendido (reintentar 3-5x)
+  6. Flashear → consola arranca 100% STOCK desde cubegm/
+Hasta completar este paso la consola NO arranca (boot/ fue retirada de la SD).
+Recovery siempre disponible: BootROM-USB (mismo kit).
+EOF
+  else
+    cat <<'EOF'
+
+PASO NOR OBLIGATORIO (físico ~2 min — método probado 2026-09-25, Fase D BOOT-1 PASS):
+  1. PC: ejecutar como ADMINISTRADOR:  D:\R36SX\hcprogrammer-own-kit\HCProgrammer.exe
+  2. Cargar proyecto:                  D:\R36SX\hcprogrammer-own-kit\hcprog.ini
+  3. Firmware:                         D:\R36SX\hcprogrammer-own-kit\HCFOTA-own-v3.bin
+     (bootloader FÁBRICA + 7 bytes: path-prefix "boot" — lee boot/)
+  4. Tool ESCUCHANDO antes de encender; consola APAGADA conectada por USB-C
+  5. ENCENDER la consola — ventana BootROM ~300ms tras el encendido (reintentar 3-5x)
+  6. Flashear → consola arranca nuestro SO desde boot/
+Hasta completar este paso la consola NO arranca (cubegm/ fue retirada de la SD).
+Recovery siempre disponible: BootROM-USB (kit factory-restore).
+EOF
+  fi
 }

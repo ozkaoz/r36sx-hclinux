@@ -42,6 +42,18 @@ if [ -d "$KD/sets" ]; then
 else
   echo "  sets/  (ninguno)"
 fi
+if [ -d "$(ks_folders_dir "$SD")" ]; then
+  for fb in "$(ks_folders_dir "$SD")"/*/; do
+    [ -d "$fb" ] || continue
+    name="$(basename "$fb")"
+    nf="$(find "$fb" -type f 2>/dev/null | wc -l)"
+    if [ -f "$fb.manifest.sha256" ]; then
+      echo "  folders/$name  ($nf archivos, manifest presente)"
+    else
+      echo "  folders/$name  ($nf archivos, *** SIN manifest ***)"
+    fi
+  done
+fi
 GB="$(ks_stock_base_dir)"
 if [ -n "$GB" ]; then
   echo "base golden stock: $GB (disponible)"

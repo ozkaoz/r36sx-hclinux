@@ -210,6 +210,87 @@ OUT="$(KS_OWN_BASE_DEFAULT="$TMP/own-base" $TO_OWN --sd "$SD5" --yes 2>&1)"; RC=
 check_rc "to_own fuente default rc" "$RC" 0
 check_eq "kernel instalado desde default" "$(h "$SD5/cubegm/vmlinux.uImage")" "$OB_K"
 
+# ============ MODO CARPETA (--folder — consola con NOR propio) ============
+# base cubegm stock ficticia: par golden + extras del sistema (subdirs)
+mkdir -p "$TMP/stockbase/cubegm/cores/bios" "$TMP/sdf/boot"
+cp "$TMP/goldens/vmlinux.uImage" "$TMP/stockbase/cubegm/vmlinux.uImage"
+cp "$TMP/goldens/dtb.bin" "$TMP/stockbase/cubegm/dtb.bin"
+cp "$TMP/goldens/avp.uImage" "$TMP/stockbase/cubegm/avp.uImage"
+mkfile "$TMP/stockbase/cubegm/xgame-logo.bmp" 4096
+mkfile "$TMP/stockbase/cubegm/cores/bios/neogeo.zip" 2048
+# SD ficticia layout boot/ (nuestra consola) con kernel propio + .bak
+mkfile "$TMP/sdf/boot/vmlinux.uImage" 45000
+mkfile "$TMP/sdf/boot/dtb.bin" 5500
+mkfile "$TMP/sdf/boot/avp.uImage" 30500
+mkfile "$TMP/sdf/boot/vmlinux.uImage.prev.bak" 44444
+F_K="$(h "$TMP/sdf/boot/vmlinux.uImage")"; F_D="$(h "$TMP/sdf/boot/dtb.bin")"; F_B="$(h "$TMP/sdf/boot/vmlinux.uImage.prev.bak")"
+
+echo "== TF1: to_stock --folder DRY-RUN no escribe =="
+OUT="$($TO_STOCK --sd "$TMP/sdf" --folder --golden-dir "$TMP/stockbase/cubegm" --dry-run 2>&1)"; RC=$?
+check_rc "dry-run folder rc" "$RC" 0
+if [ -d "$TMP/sdf/cubegm" ]; then bad "dry-run folder no debe crear cubegm/"; else ok "dry-run folder no crea cubegm/"; fi
+if [ -d "$TMP/sdf/boot" ]; then ok "boot/ intacta tras dry-run"; else bad "boot/ intacta tras dry-run"; fi
+
+echo "== TF2: to_stock --folder ejecuta el swap completo =="
+sleep 1.1
+OUT="$($TO_STOCK --sd "$TMP/sdf" --folder --golden-dir "$TMP/stockbase/cubegm" --yes 2>&1)"; RC=$?
+check_rc "to_stock --folder rc" "$RC" 0
+if [ -d "$TMP/sdf/boot" ]; then bad "boot/ debe moverse a folders/"; else ok "boot/ movida a folders/"; fi
+if [ -d "$TMP/sdf/cubegm" ]; then ok "cubegm/ instalada"; else bad "cubegm/ instalada"; fi
+check_eq "cubegm kernel == golden" "$(h "$TMP/sdf/cubegm/vmlinux.uImage")" "$GS_K"
+check_eq "cubegm dtb == golden" "$(h "$TMP/sdf/cubegm/dtb.bin")" "$GS_D"
+if [ -f "$TMP/sdf/cubegm/cores/bios/neogeo.zip" ]; then ok "extras del sistema stock copiados"; else bad "extras del sistema stock copiados"; fi
+FBD="$(find "$TMP/sdf/kernel-switch/folders" -mindepth 1 -maxdepth 1 -type d -name 'boot-own-*' | tail -n1)"
+if [ -f "$FBD.manifest.sha256" ] && ( cd "$FBD" && sha256sum -c "$FBD.manifest.sha256" ) >/dev/null 2>&1; then
+  ok "backup de carpeta boot-own verifica"
+else
+  bad "backup de carpeta boot-own verifica"
+fi
+check_eq "kernel propio en backup de carpeta" "$(h "$FBD/vmlinux.uImage")" "$F_K"
+check_eq ".bak preservado en backup" "$(h "$FBD/vmlinux.uImage.prev.bak")" "$F_B"
+check_eq "estado stock" "$(state_get "$TMP/sdf")" "stock"
+check_eq "modo folder" "$(sed -n 's/^MODE=//p' "$TMP/sdf/kernel-switch/state")" "folder"
+case "$OUT" in *"HCFOTA-factory-restore"*) ok "pasos NOR factory impresos" ;; *) bad "pasos NOR factory impresos" ;; esac
+
+echo "== TF3: base cubegm adulterada → RECHAZA sin tocar boot/ =="
+mkdir -p "$TMP/sdf2/boot" "$TMP/badbase/cubegm"
+mkfile "$TMP/sdf2/boot/vmlinux.uImage" 41000
+mkfile "$TMP/sdf2/boot/dtb.bin" 5100
+mkfile "$TMP/badbase/cubegm/vmlinux.uImage" 41000
+cp "$TMP/goldens/dtb.bin" "$TMP/badbase/cubegm/dtb.bin"
+S2K="$(h "$TMP/sdf2/boot/vmlinux.uImage")"
+if $TO_STOCK --sd "$TMP/sdf2" --folder --golden-dir "$TMP/badbase/cubegm" --yes >/dev/null 2>&1; then
+  bad "base cubegm adulterada debe morir"
+else
+  ok "base cubegm adulterada muere"
+fi
+check_eq "boot/ intacta tras rechazo" "$(h "$TMP/sdf2/boot/vmlinux.uImage")" "$S2K"
+
+echo "== TF4: to_own --folder restaura boot/ y respalda cubegm/ =="
+sleep 1.1
+OUT="$($TO_OWN --sd "$TMP/sdf" --folder --yes 2>&1)"; RC=$?
+check_rc "to_own --folder rc" "$RC" 0
+if [ -d "$TMP/sdf/boot" ]; then ok "boot/ restaurada"; else bad "boot/ restaurada"; fi
+check_eq "kernel propio restaurado" "$(h "$TMP/sdf/boot/vmlinux.uImage")" "$F_K"
+check_eq "dtb propio restaurado" "$(h "$TMP/sdf/boot/dtb.bin")" "$F_D"
+check_eq ".bak restaurado" "$(h "$TMP/sdf/boot/vmlinux.uImage.prev.bak")" "$F_B"
+if [ -d "$TMP/sdf/cubegm" ]; then bad "cubegm/ debe moverse a folders/"; else ok "cubegm/ movida a folders/"; fi
+CBD="$(find "$TMP/sdf/kernel-switch/folders" -mindepth 1 -maxdepth 1 -type d -name 'cubegm-stock-*' | tail -n1)"
+if [ -f "$CBD.manifest.sha256" ] && ( cd "$CBD" && sha256sum -c "$CBD.manifest.sha256" ) >/dev/null 2>&1; then
+  ok "backup cubegm verifica"
+else
+  bad "backup cubegm verifica"
+fi
+check_eq "estado own" "$(state_get "$TMP/sdf")" "own"
+check_eq "modo folder (own)" "$(sed -n 's/^MODE=//p' "$TMP/sdf/kernel-switch/state")" "folder"
+case "$OUT" in *"HCFOTA-own-v3"*) ok "pasos NOR own impresos" ;; *) bad "pasos NOR own impresos" ;; esac
+
+echo "== TF5: to_own --folder sin backup → muere =="
+mkdir -p "$TMP/sdf3/cubegm"
+mkfile "$TMP/sdf3/cubegm/vmlinux.uImage" 42000
+mkfile "$TMP/sdf3/cubegm/dtb.bin" 5200
+if $TO_OWN --sd "$TMP/sdf3" --folder --yes >/dev/null 2>&1; then bad "sin backup folder debe morir"; else ok "sin backup folder muere"; fi
+
 echo
 echo "=== RESULTADO: PASS=$PASS FAIL=$FAIL ==="
 if [ "$FAIL" -eq 0 ]; then
