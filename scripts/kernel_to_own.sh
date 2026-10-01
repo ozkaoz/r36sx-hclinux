@@ -129,6 +129,7 @@ if [ "$(ks_sha256 "$SD/$KS_LAYOUT/dtb.bin")" != "$HD" ]; then ks_die "post-verif
 # si algo falló antes, cubegm/ queda intacta (la consola sigue arrancando el stock)
 if [ "$FOLDER" = "1" ] && [ -d "$SD/cubegm" ]; then
   ks_folder_backup "$SD/cubegm" "$(ks_folders_dir "$SD")/cubegm-stock-$(date -u +%Y%m%dT%H%M%SZ)"
+  rm -f "$SD/cubegm.manifest.sha256"
 fi
 
 if [ "$FOLDER" = "1" ]; then

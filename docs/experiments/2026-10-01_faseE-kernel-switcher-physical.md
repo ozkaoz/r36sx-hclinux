@@ -49,3 +49,20 @@ La clave física: el bootloader propio (fábrica + 7 bytes path-prefix "boot", F
 - Bases canónicas (ADR-016): Desktop "R36SX V2.6 (0712) Minimal Backup" (stock) · SD viva (propio)
 
 **Pendiente:** boot de cierre del usuario (vuelta a SO propio) → round-trip PHYSICAL PASS → Fase E física completa. Después: E5 (UX usuario final + `docs/RECOVERY.md`) y CLEAN-INSTALL sobre una consola stock de terceros.
+
+
+## Prueba real end-user SD-level (2026-10-01) — ROUND-TRIP BIT-EXACTO PASS
+
+**Escenario real:** SD formateada por el usuario con SO Stock + TreeFrogUI (Minimal Backup + installer TreeFrogUI: stack TreeFrogUI dentro de `cubegm/`, **`frogui/` pre-existente en raíz**, 1.2GB, 4701 archivos). Baseline capturada read-only ANTES de tocar nada: `D:\R36SX\sd-baselines\20261001T015605Z\sd-baseline.sha256`.
+
+1. `install_own_os.sh` (os-base = Desktop "SO PROPIO"): backup de SU par → kernel `44a1af3e`+dtb `116ddf26` en su `cubegm/` · CREÓ `treefrog/` (555MB) + `picoarch/` con verificación total · **CONSERVÓ su `frogui/`** — RC=0, estado own/enduser, `created-folders` registrado.
+2. `restore_stock_os.sh`: SU par restaurado bit-exacto desde `orig/` · `treefrog/`+`picoarch/` → backup `own-os-*` · `frogui/` conservada — RC=0.
+3. **Verificación final: `sha256sum -c` de la baseline → 4701/4701 OK, 0 FAILED, 0 extras, 0 faltantes → la SD quedó BIT-IDÉNTICA a su estado original tras el round-trip completo.**
+
+### Hallazgos cazados por la prueba real (corregidos + selftest)
+
+1. **`frogui/` pre-existente del usuario** (la crea el installer de TreeFrogUI): restore la habría ELIMINADO → la SD no habría vuelto a su estado. FIX: `install_own_os` registra en `kernel-switch/created-folders` SOLO las carpetas que él crea; `restore_stock_os` elimina SOLO las registradas (legado sin registro = todas). TE8/TE9.
+2. **Manifests huérfanos**: `ks_folder_install` deja `<carpeta>.manifest.sha256` junto a cada carpeta creada; al mover las carpetas al backup quedaban 2 huérfanos en la raíz de la SD. FIX: restore (enduser y `--folder`) limpia los manifests de las carpetas que retira. TE4/TE8/TF4.
+3. Nota de método: `awk '{print $2}'` trunca rutas con espacios en manifiestos sha256 (542 falsos "faltantes") — extraer con `sed 's/^[0-9a-f]\{64\}  //'`.
+
+**Pendiente físico:** el boot del flujo end-user requiere una consola con NOR de fábrica (la nuestra lee `boot/`). Nivel SD: COMPLETO.

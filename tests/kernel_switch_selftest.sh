@@ -288,6 +288,7 @@ else
 fi
 check_eq "estado own" "$(state_get "$TMP/sdf")" "own"
 check_eq "modo folder (own)" "$(sed -n 's/^MODE=//p' "$TMP/sdf/kernel-switch/state")" "folder"
+check_eq "sin manifests huerfanos en raiz (TF4)" "$(find "$TMP/sdf" -maxdepth 1 -name '*.manifest.sha256' | wc -l)" "0"
 case "$OUT" in
   *"HCFOTA"*) bad "NO debe imprimir pasos HCFOTA (v2 sin NOR)" ;;
   *) ok "sin pasos HCFOTA (to_own v2)" ;;
@@ -366,6 +367,7 @@ else
 fi
 check_eq "estado stock" "$(state_get "$TMP/sde")" "stock"
 check_eq "modo enduser (stock)" "$(sed -n 's/^MODE=//p' "$TMP/sde/kernel-switch/state")" "enduser"
+check_eq "sin manifests huerfanos en raiz (TE4)" "$(find "$TMP/sde" -maxdepth 1 -name '*.manifest.sha256' | wc -l)" "0"
 
 echo "== TE5: restore sin install previo → muere =="
 mkdir -p "$TMP/sde2/cubegm"
@@ -415,6 +417,7 @@ if [ -d "$TMP/sde3/treefrog" ]; then bad "treefrog debe eliminarse (nuestra)"; e
 if [ -d "$TMP/sde3/picoarch" ]; then bad "picoarch debe eliminarse (nuestra)"; else ok "picoarch ELIMINADA (nuestra)"; fi
 if [ -d "$TMP/sde3/frogui" ]; then ok "frogui del usuario CONSERVADA"; else bad "frogui CONSERVADA"; fi
 check_eq "contenido frogui bit-exacto tras vuelta" "$(h "$TMP/sde3/frogui/user-skins/mi-skin.png")" "$U8_F"
+check_eq "sin manifests huerfanos en raiz (TE8)" "$(find "$TMP/sde3" -maxdepth 1 -name '*.manifest.sha256' | wc -l)" "0"
 
 echo "== TE9: legado sin created-folders → restore elimina TODAS las carpetas del stack =="
 mkdir -p "$TMP/sde4/cubegm" "$TMP/sde4/treefrog" "$TMP/sde4/frogui" "$TMP/sde4/picoarch"

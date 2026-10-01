@@ -101,6 +101,11 @@ if [ -n "$FOLDERS_PRESENT" ]; then
   TS="$(date -u +%Y%m%dT%H%M%SZ)"
   DEST="$(ks_folders_dir "$SD")/own-os-$TS"
   ks_folder_backup_multi "$DEST" $FOLDERS_PRESENT
+  # limpiar los manifests que ks_folder_install dejó junto a cada carpeta (artefactos
+  # nuestros — hallazgo de la prueba real 2026-10-01: sin esto quedan huérfanos en la raíz)
+  for p in $FOLDERS_PRESENT; do
+    rm -f "$p.manifest.sha256"
+  done
 fi
 
 ks_state_write "$SD" stock enduser
