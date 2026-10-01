@@ -1,5 +1,7 @@
 # docs/ROADMAP.md — Fases, gates y formato de iteración
 
+> **📦 CERRADO (2026-10-01, ADR-017).** El proyecto se archiva con las Fases 0–D COMPLETAS y la Fase E implementada (switcher físico validado en nuestra consola; SD-level end-user bit-exacto; boot físico end-user pendiente). Pendientes conocidos: E5 UX, boot físico end-user (NOR fábrica), migración 5.15 LTS, AVP propio. Guía de reanudación: `docs/ONBOARDING.md`.
+
 ## Visión
 
 BootROM → DDR-init (fábrica) → **bootloader propio (fábrica + path-prefix "boot")** → AVP/HCRTOS (stock, preservado) → **kernel propio (5.12.4 = known-good)** → **DTB propio** → **rootfs propio (Buildroot, embed determinista)** → picoarch → **TreeFrogUI como shell principal** → ecosistema multi-consola. **cubegm/ 100% eliminado.**

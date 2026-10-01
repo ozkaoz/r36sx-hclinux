@@ -2,6 +2,11 @@
 
 Formato: una línea por iteración; detalle técnico en `docs/experiments/` y commits.
 
+## 2026-10-01 — CIERRE DEL PROYECTO
+
+- **ARCHIVADO (2026-10-01, decisión del propietario — ADR-017):** el repo queda público y archivado en GitHub (read-only). Se publica **`docs/ONBOARDING.md`** — guía maestra para nuevos desarrolladores: entorno (WSL/SDK), compilación del kernel paso a paso (build_kernel.sh k512 + gates de provenance), despliegue vía kernel switcher (4 modos, sin flash), desarrollo de software (rootfs Buildroot, stack TreeFrogUI en el fork, depuración NCM/ADB), disciplina de validación y mapa completo de docs. README/CURRENT/ROADMAP/AGENTS actualizados al estado de cierre. Físico al cierre: consola del desarrollador con NOR de fábrica (flash exitoso 30-sep 21:44); SD de usuario real Stock+TreeFrogUI bit-exacta tras el round-trip del switcher; nuestro SO preservado en Desktop "SO PROPIO" + staging + backups. Pendiente documentado: boot físico del flujo end-user con NOR fábrica.
+
+
 ## 2026-09-30
 
 - **Iteración FASE E PLANIFICADA (2026-09-30 — Clase A docs, directiva usuario):** ROADMAP: nueva **Fase E — kernel switcher stock↔propio para usuario final** — `to-own-kernel`/`to-stock-kernel` con backup automático, SHA256, gestión de rollback y NOR opcional: el usuario con SO stock + TreeFrogUI + boot stock cambia fácilmente a nuestro kernel y vuelve al stock con facilidad. Efectivable ya — insumos 100% verificados: kernel 5.12.4 CLEAN PHYSICAL PASS + DTB `116ddf26` + ADR-012 (ABI userspace fábrica), goldens stock (`53b3e0b3`/`1258f1eb`/`a9788995`), kits HCProgrammer own + factory-restore (PHYSICAL PASS 2026-09-21), BootROM-USB recovery permanente, patrón `.prev-*.bak` probado en SD. Gates: regla de simetría (vuelta a stock ANTES de la ida), CLEAN-INSTALL PHYSICAL PASS sobre SD stock, compatibilidad userspace stock NO asumida (experimento dedicado). CURRENT.md sincronizado (fase + NEXT directiva).

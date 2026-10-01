@@ -1,5 +1,7 @@
 # AGENTS.md — Constitución permanente de r36sx-hclinux
 
+> **📦 PROYECTO ARCHIVADO (2026-10-01, ADR-017).** Esta constitución conserva plena vigencia para CUALQUIER reanudación: leer completa antes de tocar nada. Guía de incorporación: `docs/ONBOARDING.md`. Estado al cierre: `CURRENT.md`.
+
 **Versión:** 1.2 (2026-09-25 — Fase D completa: cubegm/ 100% eliminado, boot propio desde /boot/)
 **Repo:** https://github.com/ozkaoz/r36sx-hclinux
 **Objetivo:** plataforma Linux/HCLinux reproducible para R36SX V2.6 (HiChip HC16xx, MIPS) con TreeFrogUI estable y cubegm/ completamente eliminado.

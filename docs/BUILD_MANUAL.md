@@ -1,4 +1,6 @@
 # r36sx-hclinux — Build Manual & Methodology
+
+> **Nota (2026-10-01):** la guía de entrada actual es `docs/ONBOARDING.md` (estado final del flujo). Este manual conserva el método y las lecciones históricas (válido salvo que su §4.2 despliega a `cubegm/` — hoy el despliegue se hace con el kernel switcher, ver ONBOARDING §4, y el boot propio usa `boot/`).
 > Technical guide for compiling and deploying Linux/TreeFrogUI on HiChip HC1600A consoles. Captures the full method, tools, and lessons learned.
 
 ## 1. Target Hardware

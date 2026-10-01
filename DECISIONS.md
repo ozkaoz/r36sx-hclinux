@@ -207,3 +207,16 @@ Formato ADR. STATUS: ACTIVE | SUPERSEDED | DEPRECATED. No registrar aquí nada m
 - **CONSEQUENCES:** `KS_STOCK_BASE_DEFAULT`/`KS_OWN_BASE_DEFAULT` en `scripts/kernel_switch_lib.sh` apuntan a las bases canónicas (override por env para tests); `manifests/GOLDEN_STOCK.sha256` es contrato del gate de E2; copias divergentes NO se usan como fuente golden. Hallazgo asociado: `sha256sum -c` ignora líneas mal formateadas → la verificación de backups es estricta por-archivo (hex-64) además de `-c`.
 - **EVIDENCE:** hashes verificados 2026-09-30 (Minimal Backup cubegm == staging `vmlinux.uImage-STOCK-53B3E0B3` == sd-state-preserved {dtb,avp} == `G:/boot/avp.uImage.golden.bak`); `tests/kernel_switch_selftest.sh` T13/T14 (golden verificado/adulterado).
 - **RELATED:** `docs/ROADMAP.md` §Fase E; `scripts/kernel_to_own.sh`; `scripts/kernel_to_stock.sh`.
+
+
+## ADR-017 — Archivo del proyecto: repo público read-only + guía de incorporación para reanudación
+
+- **DATE:** 2026-10-01
+- **STATUS:** FINAL
+- **SCOPE:** todo el repositorio y su continuidad.
+- **CONTEXT:** el propietario decide abandonar el proyecto. La plataforma está completa y físicamente validada hasta la Fase E (kernel switcher): kernel propio 5.12.4 CLEAN PHYSICAL PASS, boot propio desde boot/ (fábrica+7B), cubegm/ eliminado, USB completo (MTP/NCM/ADB) y switcher stock↔propio (round-trip físico en nuestra consola + SD-level bit-exacto 4701/4701 en la SD real de un usuario). Único pendiente físico: boot del flujo end-user con NOR de fábrica.
+- **DECISION:** (1) Archivar el repo GitHub como público read-only. (2) Publicar `docs/ONBOARDING.md` como guía maestra de incorporación (entorno → compilar → desplegar → desarrollar). (3) Actualizar README/CURRENT/ROADMAP/AGENTS al estado de cierre con los pendientes documentados. (4) Los assets físicos irrepetibles del desarrollador (SDK, kits HCProgrammer, goldens, SO PROPIO, backups SD) permanecen en sus rutas documentadas — ver `CURRENT.md` §KNOWN-GOOD.
+- **RATIONALE:** el trabajo es reproducible desde GitHub + SDK + esta documentación; el archivo público maximiza su valor para la comunidad TreeFrogUI/HiChip; el estado físico al cierre queda documentado con hashes.
+- **CONSEQUENCES:** el repo no aceptará más pushes (desarchivar = decisión del propietario). Cualquier reanudación comienza en `docs/ONBOARDING.md` §8 (mapa) y `CURRENT.md` §NEXT. El fork TreeFrogUI (stack) queda como repositorio vivo independiente.
+- **EVIDENCE:** log del kit restore ("Upgrade success, fail 0" 2026-09-30 21:44); baseline SD real `D:\R36SX\sd-baselines\20261001T023855Z\` (4701/4701 tras round-trip); `docs/experiments/2026-10-01_faseE-kernel-switcher-physical.md`.
+- **RELATED:** ADR-016 (bases canónicas del switcher); todos los ADR previos conservan vigencia técnica.

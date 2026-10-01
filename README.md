@@ -2,6 +2,12 @@
 
 **Reproducible Linux/HClinux platform for HiChip HC1600A MIPS handheld consoles (R36SX V2.6, SF3000, SF3500, GB350) with TreeFrogUI as the target frontend.**
 
+> **📦 PROJECT ARCHIVED (2026-10-01) — decision by the owner (ADR-017).**
+> The platform is complete and physically validated: own kernel 5.12.4 (CLEAN PHYSICAL PASS), own boot from `boot/` (factory bootloader + 7 bytes), cubegm/ 100% eliminated, full USB stack (MTP/NCM/ADB) and a **stock↔own kernel switcher** for end users (SD-level round-trip bit-exact PASS on a real user SD).
+> **New developer? Start here: [`docs/ONBOARDING.md`](docs/ONBOARDING.md)** — complete step-by-step guide (environment → build the kernel → deploy → develop for the console).
+> Not completed at closure: end-user physical boot test on a factory-NOR console, 5.15 LTS migration, own AVP firmware. Details: `docs/ROADMAP.md` + `CURRENT.md`.
+
+
 ## Current State
 
 **FASE D COMPLETE — cubegm/ 100% eliminated. Console fully controlled.**
