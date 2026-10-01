@@ -20,7 +20,7 @@ BootROM → DDR-init (fábrica) → **bootloader propio (fábrica + path-prefix 
 | **8. Rootfs propio** | Buildroot + clean install | ✅ DONE (sin SHIM — boot directo desde /boot/) |
 | **D. Boot propio + eliminar cubegm/** | Bootloader en NOR con path-prefix "boot" + cubegm/ 100% eliminado | ✅ **COMPLETE** (2026-09-25) |
 | **9. Kernel 5.12.4** | Upgrade desde 4.4.186 known-good | ✅ DONE — CLEAN PHYSICAL PASS |
-| **E. Kernel switcher stock ↔ propio** | Usuario final: cambiar fácilmente al kernel propio desde SO/boot stock, y volver al stock | 🔶 **EN CURSO** — E1–E3 DONE (HOST PASS 56/56); física pendiente |
+| **E. Kernel switcher stock ↔ propio** | Usuario final: cambiar fácilmente al kernel propio desde SO/boot stock, y volver al stock | 🔶 **EN CURSO** — E1–E4 DONE (HOST PASS 90/90); **IDA PHYSICAL PASS** (SO stock completo booteó); vuelta desplegada (boot de cierre pendiente) |
 
 ## Fase D — COMPLETE ✅
 
@@ -75,6 +75,7 @@ BootROM → DDR-init (fábrica) → **bootloader propio (fábrica + path-prefix 
 
 - **Regla de simetría:** la vuelta a stock (E2+E3) se implementa y valida ANTES que la ida (E1). Ningún switch sin camino de vuelta probado.
 - E1–E3 = **Clase B**: shellcheck + HOST PASS en SD de test → **CLEAN-INSTALL PHYSICAL PASS**: kernel propio instalado sobre SD/consola stock → boot → menú → juego → shutdown → vuelta a stock → boot stock PASS.
+- **VALIDACIÓN FÍSICA 2026-10-01 (nuestra consola):** IDA a SO STOCK COMPLETO = PHYSICAL PASS (el usuario llegó al menú del SO stock: bootloader propio → kernel de fábrica → cubegm/) — sin flash NOR, sin gap. Vuelta desplegada; boot de cierre pendiente. Detalle: `docs/experiments/2026-10-01_faseE-kernel-switcher-physical.md`.
 - Compatibilidad kernel propio + SD/userspace 100% stock: **NO asumida** — experimento físico dedicado; si requiere rootfs/S99app propios, definir el conjunto mínimo (ADR nueva).
 - E4 = **Clase D+F**: autorización hardware explícita; solo con dump NOR previo (`scripts/nor_dump.sh`) y BootROM-USB verificado.
 - Cada script cumple AGENTS §5: identificar dispositivo → mostrar info → confirmar tamaño/modelo/mounts → autorización → escribir. La SD stock original del usuario es golden: solo se tocan los archivos de boot del switch documentado.
