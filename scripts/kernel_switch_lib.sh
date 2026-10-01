@@ -26,7 +26,17 @@ KS_STATE_DIR="kernel-switch"
 KS_SETS_KEEP=3
 KS_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KS_REPO_ROOT="$(cd "$KS_LIB_DIR/.." && pwd)"
-KS_GOLDEN_MANIFEST="${KS_GOLDEN_MANIFEST:-$KS_REPO_ROOT/manifests/GOLDEN_STOCK.sha256}"
+# Manifiesto golden: auto-localización (distribución autocontenida en SD):
+# 1) override por env (tests) · 2) repo (scripts/../manifests/) · 3) junto a la lib (paquete SD)
+if [ -z "${KS_GOLDEN_MANIFEST:-}" ]; then
+  if [ -f "$KS_REPO_ROOT/manifests/GOLDEN_STOCK.sha256" ]; then
+    KS_GOLDEN_MANIFEST="$KS_REPO_ROOT/manifests/GOLDEN_STOCK.sha256"
+  elif [ -f "$KS_LIB_DIR/manifests/GOLDEN_STOCK.sha256" ]; then
+    KS_GOLDEN_MANIFEST="$KS_LIB_DIR/manifests/GOLDEN_STOCK.sha256"
+  else
+    KS_GOLDEN_MANIFEST="$KS_REPO_ROOT/manifests/GOLDEN_STOCK.sha256"
+  fi
+fi
 # Override por env (tests) — defaults = bases canónicas del usuario
 KS_STOCK_BASE_DEFAULT="${KS_STOCK_BASE_DEFAULT:-/mnt/c/Users/DaFunkNoise/Desktop/Instalación Base TREEFROG/R36SX V2.6 (0712) Minimal Backup/cubegm}"
 KS_STOCK_BASE_FALLBACK="${KS_STOCK_BASE_FALLBACK:-/mnt/d/R36SX/goldens-stock}"

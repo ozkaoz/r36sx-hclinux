@@ -388,6 +388,55 @@ else
 fi
 check_eq "sde2 intacta (base incompleta)" "$(h "$TMP/sde2/cubegm/vmlinux.uImage")" "$S2E_K"
 
+echo "== TE8: frogui/ PRE-EXISTENTE del usuario se CONSERVA (ida y vuelta bit-exacta) =="
+mkdir -p "$TMP/sde3/cubegm" "$TMP/sde3/frogui/user-skins"
+cp "$TMP/goldens/vmlinux.uImage" "$TMP/sde3/cubegm/vmlinux.uImage"
+cp "$TMP/goldens/dtb.bin" "$TMP/sde3/cubegm/dtb.bin"
+mkfile "$TMP/sde3/frogui/user-skins/mi-skin.png" 1500
+U8_F="$(h "$TMP/sde3/frogui/user-skins/mi-skin.png")"
+$TO_INSTALL --sd "$TMP/sde3" --os-base "$TMP/osbase" --yes >/dev/null 2>&1
+RC=$?
+check_rc "install con frogui pre-existente rc" "$RC" 0
+check_eq "frogui del usuario intacta tras install" "$(h "$TMP/sde3/frogui/user-skins/mi-skin.png")" "$U8_F"
+if [ -f "$TMP/sde3/kernel-switch/created-folders" ]; then ok "created-folders registrado"; else bad "created-folders registrado"; fi
+CF_CONTENT="$(cat "$TMP/sde3/kernel-switch/created-folders" 2>/dev/null | sort | tr '\n' ' ')"
+case "$CF_CONTENT" in
+  *treefrog*) ok "treefrog registrado como creado" ;; *) bad "treefrog registrado como creado" ;;
+esac
+case "$CF_CONTENT" in
+  *frogui*) bad "frogui NO debe registrarse (pre-existente)" ;; *) ok "frogui excluida del registro" ;;
+esac
+sleep 1.1
+$TO_RESTORE --sd "$TMP/sde3" --yes >/dev/null 2>&1
+RC=$?
+check_rc "restore con registro rc" "$RC" 0
+check_eq "SU kernel stock restaurado (TE8)" "$(h "$TMP/sde3/cubegm/vmlinux.uImage")" "$GS_K"
+if [ -d "$TMP/sde3/treefrog" ]; then bad "treefrog debe eliminarse (nuestra)"; else ok "treefrog ELIMINADA (nuestra)"; fi
+if [ -d "$TMP/sde3/picoarch" ]; then bad "picoarch debe eliminarse (nuestra)"; else ok "picoarch ELIMINADA (nuestra)"; fi
+if [ -d "$TMP/sde3/frogui" ]; then ok "frogui del usuario CONSERVADA"; else bad "frogui CONSERVADA"; fi
+check_eq "contenido frogui bit-exacto tras vuelta" "$(h "$TMP/sde3/frogui/user-skins/mi-skin.png")" "$U8_F"
+
+echo "== TE9: legado sin created-folders → restore elimina TODAS las carpetas del stack =="
+mkdir -p "$TMP/sde4/cubegm" "$TMP/sde4/treefrog" "$TMP/sde4/frogui" "$TMP/sde4/picoarch"
+cp "$TMP/goldens/vmlinux.uImage" "$TMP/sde4/cubegm/vmlinux.uImage"
+cp "$TMP/goldens/dtb.bin" "$TMP/sde4/cubegm/dtb.bin"
+mkfile "$TMP/sde4/treefrog/marker.bin" 1000
+mkfile "$TMP/sde4/frogui/marker.bin" 1000
+mkfile "$TMP/sde4/picoarch/marker.bin" 1000
+$TO_INSTALL --sd "$TMP/sde4" --os-base "$TMP/osbase" --yes >/dev/null 2>&1
+RC=$?
+check_rc "install con las 3 pre-existentes rc" "$RC" 0
+if [ -f "$TMP/sde4/kernel-switch/created-folders" ]; then bad "sin carpetas creadas NO debe existir registro"; else ok "registro ausente (nada creado)"; fi
+check_eq "kernel nuestro instalado (sde4)" "$(h "$TMP/sde4/cubegm/vmlinux.uImage")" "$OB3_K"
+sleep 1.1
+$TO_RESTORE --sd "$TMP/sde4" --yes >/dev/null 2>&1
+RC=$?
+check_rc "restore legado rc" "$RC" 0
+check_eq "stock restaurado (sde4)" "$(h "$TMP/sde4/cubegm/vmlinux.uImage")" "$GS_K"
+for f in treefrog frogui picoarch; do
+  if [ -d "$TMP/sde4/$f" ]; then bad "legado: $f/ debe eliminarse"; else ok "legado: $f/ ELIMINADA"; fi
+done
+
 echo
 echo "=== RESULTADO: PASS=$PASS FAIL=$FAIL ==="
 if [ "$FAIL" -eq 0 ]; then

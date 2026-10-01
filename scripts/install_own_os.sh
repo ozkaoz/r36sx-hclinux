@@ -27,7 +27,7 @@ La vuelta: restore_stock_os.sh --sd <ruta SD>
 EOF
 }
 
-SD=""; OS_BASE=""; KS_YES=0; KS_DRY_RUN=0
+SD=""; OS_BASE=""; KS_YES=0; KS_DRY_RUN=0; CREATED_FOLDERS=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -106,11 +106,20 @@ ks_install_file "$OS_BASE/boot/dtb.bin" "$SD/$KS_LAYOUT/dtb.bin"
 
 for f in "${KS_OWN_OS_FOLDERS[@]}"; do
   if [ -d "$SD/$f" ]; then
-    ks_log "$f/ ya presente — se conserva"
+    ks_log "$f/ ya presente en la SD — se CONSERVA (pre-existente del usuario, no se sobreescribe)"
   else
     ks_folder_install "$OS_BASE/$f" "$SD/$f"
+    CREATED_FOLDERS="$CREATED_FOLDERS $f"
   fi
 done
+# Registro de las carpetas que NOSOTROS creamos (restore elimina SOLO estas;
+# las pre-existentes del usuario — p.ej. frogui/ del installer de TreeFrogUI — se conservan)
+if [ -n "$CREATED_FOLDERS" ]; then
+  printf '%s\n' $CREATED_FOLDERS > "$(ks_state_dir "$SD")/created-folders"
+  ks_log "carpetas creadas por nosotros (registro para el restore): $CREATED_FOLDERS"
+else
+  rm -f "$(ks_state_dir "$SD")/created-folders"
+fi
 
 if [ "$(ks_sha256 "$SD/$KS_LAYOUT/vmlinux.uImage")" != "$HK" ]; then ks_die "post-verify kernel FAIL"; fi
 if [ "$(ks_sha256 "$SD/$KS_LAYOUT/dtb.bin")" != "$HD" ]; then ks_die "post-verify DTB FAIL"; fi

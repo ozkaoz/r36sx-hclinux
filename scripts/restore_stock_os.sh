@@ -49,10 +49,21 @@ TK="$(ks_manifest_hashes "$ORIG" vmlinux.uImage)" || true
 TD="$(ks_manifest_hashes "$ORIG" dtb.bin)" || true
 if [ -z "$TK" ] || [ -z "$TD" ]; then ks_die "el backup orig no aporta hashes válidos — restore RECHAZADO"; fi
 
+# Carpetas a eliminar: SOLO las que NOSOTROS creamos (registro del install).
+# Las pre-existentes del usuario (p.ej. frogui/ del installer de TreeFrogUI) se CONSERVAN.
+# Legado (sin registro): todas las del stack (comportamiento original).
+CF_FILE="$(ks_state_dir "$SD")/created-folders"
 FOLDERS_PRESENT=""
-for f in "${KS_OWN_OS_FOLDERS[@]}"; do
-  if [ -d "$SD/$f" ]; then FOLDERS_PRESENT="$FOLDERS_PRESENT $SD/$f"; fi
-done
+if [ -s "$CF_FILE" ]; then
+  while IFS= read -r fname; do
+    [ -n "$fname" ] || continue
+    if [ -d "$SD/$fname" ]; then FOLDERS_PRESENT="$FOLDERS_PRESENT $SD/$fname"; fi
+  done < "$CF_FILE"
+else
+  for f in "${KS_OWN_OS_FOLDERS[@]}"; do
+    if [ -d "$SD/$f" ]; then FOLDERS_PRESENT="$FOLDERS_PRESENT $SD/$f"; fi
+  done
+fi
 
 ks_show_info "$SD" "$KS_LAYOUT"
 PAIR_ALREADY="no"
