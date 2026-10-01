@@ -31,6 +31,11 @@ KS_GOLDEN_MANIFEST="${KS_GOLDEN_MANIFEST:-$KS_REPO_ROOT/manifests/GOLDEN_STOCK.s
 KS_STOCK_BASE_DEFAULT="${KS_STOCK_BASE_DEFAULT:-/mnt/c/Users/DaFunkNoise/Desktop/Instalación Base TREEFROG/R36SX V2.6 (0712) Minimal Backup/cubegm}"
 KS_STOCK_BASE_FALLBACK="${KS_STOCK_BASE_FALLBACK:-/mnt/d/R36SX/goldens-stock}"
 KS_OWN_BASE_DEFAULT="${KS_OWN_BASE_DEFAULT:-/mnt/g/boot}"
+# Base del SO PROPIO COMPLETO (usuario final): carpeta "SO PROPIO" del Desktop —
+# boot/ (nuestro par) + treefrog/ + frogui/ + picoarch/ + rootfs/ + roms/
+KS_OWN_OS_BASE_DEFAULT="${KS_OWN_OS_BASE_DEFAULT:-/mnt/c/Users/DaFunkNoise/Desktop/Instalación Base TREEFROG/SO PROPIO}"
+# Carpetas de NUESTRO stack que un usuario final no tiene y el script debe CREAR
+KS_OWN_OS_FOLDERS=(treefrog frogui picoarch)
 
 ks_die() { echo "ERROR: $*" >&2; exit 1; }
 ks_log() { echo "[kernel-switch] $*"; }
@@ -321,6 +326,26 @@ ks_folder_backup() { # $1=carpeta $2=dest_dir — MUEVE (rename mismo volumen) +
   ks_folder_manifest_to "$dest" "$dest.manifest.sha256" || ks_die "manifest del backup falló: $dest"
   sync
   ks_log "carpeta respaldada (move+manifest): $src -> $dest"
+}
+
+ks_folder_backup_multi() { # $1=dest_dir $2...=carpetas (RUTAS COMPLETAS) — mueve varias a dest + manifest conjunto
+  local dest="$1"; shift
+  local f moved=0
+  if [ -e "$dest" ]; then ks_die "destino de backup ya existe: $dest"; fi
+  mkdir -p "$dest"
+  for f in "$@"; do
+    if [ -d "$f" ]; then
+      mv "$f" "$dest/$(basename "$f")" || ks_die "fallo moviendo $f -> $dest"
+      moved=$((moved+1))
+    fi
+  done
+  if [ "$moved" -eq 0 ]; then
+    rmdir "$dest" 2>/dev/null || true
+    ks_die "backup_multi: ninguna carpeta existía que mover (¿rutas completas?) — nada respaldado"
+  fi
+  ks_folder_manifest_to "$dest" "$dest.manifest.sha256" || ks_die "manifest del backup falló: $dest"
+  sync
+  ks_log "carpetas respaldadas (move+manifest, $moved): $dest"
 }
 
 ks_folder_install() { # $1=src_folder $2=dest_folder — cp -a + rename + verificación TOTAL contra el origen

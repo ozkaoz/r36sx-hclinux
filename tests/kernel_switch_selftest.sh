@@ -303,6 +303,91 @@ check_rc "to_own --folder sin cubegm rc" "$RC" 0
 check_eq "par propio instalado" "$(h "$TMP/sdf5/boot/vmlinux.uImage")" "$OB2_K"
 check_eq "modo folder (sdf5)" "$(sed -n 's/^MODE=//p' "$TMP/sdf5/kernel-switch/state")" "folder"
 
+# ============ USUARIO FINAL (SD stock SIN estado previo → SO propio → vuelta) ============
+# Simula la SD real de un usuario final: sin backups, sin switcher, sin carpetas nuestras.
+mkdir -p "$TMP/osbase/boot" "$TMP/osbase/treefrog/cores" "$TMP/osbase/frogui" "$TMP/osbase/picoarch" "$TMP/sde/cubegm/cores" "$TMP/sde/roms"
+mkfile "$TMP/osbase/boot/vmlinux.uImage" 46000
+mkfile "$TMP/osbase/boot/dtb.bin" 5600
+mkfile "$TMP/osbase/treefrog/zhijack.sh" 3000
+mkfile "$TMP/osbase/treefrog/cores/libemu_x.so" 5000
+mkfile "$TMP/osbase/frogui/skin.png" 2000
+mkfile "$TMP/osbase/picoarch/picoarch.cfg" 500
+cp "$TMP/goldens/vmlinux.uImage" "$TMP/sde/cubegm/vmlinux.uImage"
+cp "$TMP/goldens/dtb.bin" "$TMP/sde/cubegm/dtb.bin"
+cp "$TMP/goldens/avp.uImage" "$TMP/sde/cubegm/avp.uImage"
+mkfile "$TMP/sde/cubegm/cores/libemu_stock.so" 4000
+mkfile "$TMP/sde/roms/juego.gb" 1000
+STK_SO="$(h "$TMP/sde/cubegm/cores/libemu_stock.so")"
+ROM_H="$(h "$TMP/sde/roms/juego.gb")"
+OB3_K="$(h "$TMP/osbase/boot/vmlinux.uImage")"; OB3_D="$(h "$TMP/osbase/boot/dtb.bin")"
+TO_INSTALL="bash $R/scripts/install_own_os.sh"
+TO_RESTORE="bash $R/scripts/restore_stock_os.sh"
+
+echo "== TE1: install_own_os DRY-RUN no escribe =="
+OUT="$($TO_INSTALL --sd "$TMP/sde" --os-base "$TMP/osbase" --dry-run 2>&1)"; RC=$?
+check_rc "dry-run install rc" "$RC" 0
+check_eq "par stock intacto tras dry-run" "$(h "$TMP/sde/cubegm/vmlinux.uImage")" "$GS_K"
+if [ -d "$TMP/sde/kernel-switch" ]; then bad "dry-run no debe crear kernel-switch/"; else ok "dry-run sin kernel-switch/"; fi
+
+echo "== TE2: install_own_os — SO completo DESDE CERO (sin backups previos) =="
+OUT="$($TO_INSTALL --sd "$TMP/sde" --os-base "$TMP/osbase" --yes 2>&1)"; RC=$?
+check_rc "install rc" "$RC" 0
+check_eq "kernel nuestro en su cubegm/" "$(h "$TMP/sde/cubegm/vmlinux.uImage")" "$OB3_K"
+check_eq "dtb nuestro en su cubegm/" "$(h "$TMP/sde/cubegm/dtb.bin")" "$OB3_D"
+check_eq "avp fábrica NO tocado" "$(h "$TMP/sde/cubegm/avp.uImage")" "$GS_A"
+check_eq "su sistema stock NO tocado" "$(h "$TMP/sde/cubegm/cores/libemu_stock.so")" "$STK_SO"
+if [ -d "$TMP/sde/treefrog" ]; then ok "treefrog/ CREADA"; else bad "treefrog/ CREADA"; fi
+if [ -f "$TMP/sde/treefrog/cores/libemu_x.so" ]; then ok "contenido treefrog copiado"; else bad "contenido treefrog copiado"; fi
+if [ -d "$TMP/sde/frogui" ] && [ -d "$TMP/sde/picoarch" ]; then ok "frogui/ + picoarch/ CREADAS"; else bad "frogui/ + picoarch/ CREADAS"; fi
+check_eq "orig guarda SU par stock" "$(h "$TMP/sde/kernel-switch/orig/vmlinux.uImage")" "$GS_K"
+check_eq "estado own" "$(state_get "$TMP/sde")" "own"
+check_eq "modo enduser" "$(sed -n 's/^MODE=//p' "$TMP/sde/kernel-switch/state")" "enduser"
+check_eq "sus roms intactos" "$(h "$TMP/sde/roms/juego.gb")" "$ROM_H"
+
+echo "== TE3: install_own_os idempotente =="
+OUT="$($TO_INSTALL --sd "$TMP/sde" --os-base "$TMP/osbase" --yes 2>&1)"; RC=$?
+check_rc "install idempotente rc" "$RC" 0
+case "$OUT" in *"nada que hacer"*) ok "mensaje idempotente install" ;; *) bad "mensaje idempotente install" ;; esac
+
+echo "== TE4: restore_stock_os — vuelta a SU stock ORIGINAL =="
+sleep 1.1
+OUT="$($TO_RESTORE --sd "$TMP/sde" --yes 2>&1)"; RC=$?
+check_rc "restore rc" "$RC" 0
+check_eq "SU kernel stock restaurado" "$(h "$TMP/sde/cubegm/vmlinux.uImage")" "$GS_K"
+check_eq "SU dtb stock restaurado" "$(h "$TMP/sde/cubegm/dtb.bin")" "$GS_D"
+for f in treefrog frogui picoarch; do
+  if [ -d "$TMP/sde/$f" ]; then bad "$f/ debe eliminarse"; else ok "$f/ ELIMINADA (backup)"; fi
+done
+OWS="$(find "$TMP/sde/kernel-switch/folders" -mindepth 1 -maxdepth 1 -type d -name 'own-os-*' | tail -n1)"
+if [ -f "$OWS.manifest.sha256" ] && ( cd "$OWS" && sha256sum -c "$OWS.manifest.sha256" ) >/dev/null 2>&1; then
+  ok "backup own-os verifica"
+else
+  bad "backup own-os verifica"
+fi
+check_eq "estado stock" "$(state_get "$TMP/sde")" "stock"
+check_eq "modo enduser (stock)" "$(sed -n 's/^MODE=//p' "$TMP/sde/kernel-switch/state")" "enduser"
+
+echo "== TE5: restore sin install previo → muere =="
+mkdir -p "$TMP/sde2/cubegm"
+mkfile "$TMP/sde2/cubegm/vmlinux.uImage" 47000
+mkfile "$TMP/sde2/cubegm/dtb.bin" 5700
+S2E_K="$(h "$TMP/sde2/cubegm/vmlinux.uImage")"
+if $TO_RESTORE --sd "$TMP/sde2" --yes >/dev/null 2>&1; then bad "sin orig debe morir"; else ok "sin orig muere"; fi
+check_eq "sde2 intacta tras rechazo" "$(h "$TMP/sde2/cubegm/vmlinux.uImage")" "$S2E_K"
+
+echo "== TE6: install en layout boot/ (nuestra consola) → muere con hint =="
+if $TO_INSTALL --sd "$TMP/sdf5" --os-base "$TMP/osbase" --yes >/dev/null 2>&1; then bad "layout boot/ debe morir"; else ok "layout boot/ muere con hint"; fi
+
+echo "== TE7: os-base incompleto → muere ANTES de tocar la SD =="
+mkdir -p "$TMP/badbase/boot"
+mkfile "$TMP/badbase/boot/vmlinux.uImage" 48000
+if $TO_INSTALL --sd "$TMP/sde2" --os-base "$TMP/badbase" --yes >/dev/null 2>&1; then
+  bad "base incompleta debe morir"
+else
+  ok "base incompleta muere"
+fi
+check_eq "sde2 intacta (base incompleta)" "$(h "$TMP/sde2/cubegm/vmlinux.uImage")" "$S2E_K"
+
 echo
 echo "=== RESULTADO: PASS=$PASS FAIL=$FAIL ==="
 if [ "$FAIL" -eq 0 ]; then
