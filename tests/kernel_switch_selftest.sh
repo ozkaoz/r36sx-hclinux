@@ -104,9 +104,9 @@ check_eq "kernel sigue propio tras rechazo" "$(h "$SD/cubegm/vmlinux.uImage")" "
 cp "$TMP/manifest.bak" "$SD/kernel-switch/orig/manifest.sha256"
 
 echo "== T8b: hash hex válido pero incorrecto → también RECHAZA =="
-C1="$(cut -c1 "$TMP/manifest.bak")"
-if [ "$C1" = "1" ]; then R="0"; else R="1"; fi
-sed -i "1s/^./$R/" "$SD/kernel-switch/orig/manifest.sha256"
+C1="$(head -c1 "$TMP/manifest.bak")"
+if [ "$C1" = "1" ]; then R2="0"; else R2="1"; fi
+sed -i "1s/^./$R2/" "$SD/kernel-switch/orig/manifest.sha256"
 if $TO_STOCK --sd "$SD" --yes >/dev/null 2>&1; then bad "hash incorrecto debe morir"; else ok "hash incorrecto muere"; fi
 check_eq "kernel sigue propio tras rechazo (hex válido)" "$(h "$SD/cubegm/vmlinux.uImage")" "$OB_K"
 cp "$TMP/manifest.bak" "$SD/kernel-switch/orig/manifest.sha256"
@@ -210,15 +210,15 @@ OUT="$(KS_OWN_BASE_DEFAULT="$TMP/own-base" $TO_OWN --sd "$SD5" --yes 2>&1)"; RC=
 check_rc "to_own fuente default rc" "$RC" 0
 check_eq "kernel instalado desde default" "$(h "$SD5/cubegm/vmlinux.uImage")" "$OB_K"
 
-# ============ MODO CARPETA (--folder — consola con NOR propio) ============
-# base cubegm stock ficticia: par golden + extras del sistema (subdirs)
+# ============ MODO CARPETA v2 (--folder — SO COMPLETO, SIN flash NOR) ============
+# v2: boot/ SIEMPRE presente. to_stock --folder: par stock en boot/ + cubegm/ CREADA.
+# to_own --folder: par propio en boot/ + cubegm/ ELIMINADA (backup). Nada de HCFOTA.
 mkdir -p "$TMP/stockbase/cubegm/cores/bios" "$TMP/sdf/boot"
 cp "$TMP/goldens/vmlinux.uImage" "$TMP/stockbase/cubegm/vmlinux.uImage"
 cp "$TMP/goldens/dtb.bin" "$TMP/stockbase/cubegm/dtb.bin"
 cp "$TMP/goldens/avp.uImage" "$TMP/stockbase/cubegm/avp.uImage"
 mkfile "$TMP/stockbase/cubegm/xgame-logo.bmp" 4096
 mkfile "$TMP/stockbase/cubegm/cores/bios/neogeo.zip" 2048
-# SD ficticia layout boot/ (nuestra consola) con kernel propio + .bak
 mkfile "$TMP/sdf/boot/vmlinux.uImage" 45000
 mkfile "$TMP/sdf/boot/dtb.bin" 5500
 mkfile "$TMP/sdf/boot/avp.uImage" 30500
@@ -229,28 +229,32 @@ echo "== TF1: to_stock --folder DRY-RUN no escribe =="
 OUT="$($TO_STOCK --sd "$TMP/sdf" --folder --golden-dir "$TMP/stockbase/cubegm" --dry-run 2>&1)"; RC=$?
 check_rc "dry-run folder rc" "$RC" 0
 if [ -d "$TMP/sdf/cubegm" ]; then bad "dry-run folder no debe crear cubegm/"; else ok "dry-run folder no crea cubegm/"; fi
-if [ -d "$TMP/sdf/boot" ]; then ok "boot/ intacta tras dry-run"; else bad "boot/ intacta tras dry-run"; fi
+check_eq "boot/ intacta tras dry-run" "$(h "$TMP/sdf/boot/vmlinux.uImage")" "$F_K"
 
-echo "== TF2: to_stock --folder ejecuta el swap completo =="
+echo "== TF2: to_stock --folder — SO stock completo (boot/ presente + cubegm/ creada) =="
 sleep 1.1
 OUT="$($TO_STOCK --sd "$TMP/sdf" --folder --golden-dir "$TMP/stockbase/cubegm" --yes 2>&1)"; RC=$?
 check_rc "to_stock --folder rc" "$RC" 0
-if [ -d "$TMP/sdf/boot" ]; then bad "boot/ debe moverse a folders/"; else ok "boot/ movida a folders/"; fi
-if [ -d "$TMP/sdf/cubegm" ]; then ok "cubegm/ instalada"; else bad "cubegm/ instalada"; fi
+if [ -d "$TMP/sdf/boot" ]; then ok "boot/ SIGUE presente (sin gap)"; else bad "boot/ SIGUE presente (sin gap)"; fi
+check_eq "boot/ kernel == golden" "$(h "$TMP/sdf/boot/vmlinux.uImage")" "$GS_K"
+check_eq "boot/ dtb == golden" "$(h "$TMP/sdf/boot/dtb.bin")" "$GS_D"
+check_eq "boot/ .bak intacto" "$(h "$TMP/sdf/boot/vmlinux.uImage.prev.bak")" "$F_B"
+if [ -d "$TMP/sdf/cubegm" ]; then ok "cubegm/ CREADA"; else bad "cubegm/ CREADA"; fi
 check_eq "cubegm kernel == golden" "$(h "$TMP/sdf/cubegm/vmlinux.uImage")" "$GS_K"
-check_eq "cubegm dtb == golden" "$(h "$TMP/sdf/cubegm/dtb.bin")" "$GS_D"
 if [ -f "$TMP/sdf/cubegm/cores/bios/neogeo.zip" ]; then ok "extras del sistema stock copiados"; else bad "extras del sistema stock copiados"; fi
-FBD="$(find "$TMP/sdf/kernel-switch/folders" -mindepth 1 -maxdepth 1 -type d -name 'boot-own-*' | tail -n1)"
-if [ -f "$FBD.manifest.sha256" ] && ( cd "$FBD" && sha256sum -c "$FBD.manifest.sha256" ) >/dev/null 2>&1; then
-  ok "backup de carpeta boot-own verifica"
-else
-  bad "backup de carpeta boot-own verifica"
-fi
-check_eq "kernel propio en backup de carpeta" "$(h "$FBD/vmlinux.uImage")" "$F_K"
-check_eq ".bak preservado en backup" "$(h "$FBD/vmlinux.uImage.prev.bak")" "$F_B"
+check_eq "snapshot guarda nuestro par saliente" "$(h "$(find "$TMP/sdf/kernel-switch/sets" -mindepth 1 -maxdepth 1 -type d | sort | tail -n1)/vmlinux.uImage")" "$F_K"
+if [ -d "$TMP/sdf/kernel-switch/orig" ]; then bad "to_stock no debe crear orig (es de to_own)"; else ok "orig solo lo crea to_own"; fi
 check_eq "estado stock" "$(state_get "$TMP/sdf")" "stock"
 check_eq "modo folder" "$(sed -n 's/^MODE=//p' "$TMP/sdf/kernel-switch/state")" "folder"
-case "$OUT" in *"HCFOTA-factory-restore"*) ok "pasos NOR factory impresos" ;; *) bad "pasos NOR factory impresos" ;; esac
+case "$OUT" in
+  *"HCFOTA"*) bad "NO debe imprimir pasos HCFOTA (v2 sin NOR)" ;;
+  *) ok "sin pasos HCFOTA (v2 sin NOR)" ;;
+esac
+
+echo "== TF2b: to_stock --folder idempotente =="
+OUT="$($TO_STOCK --sd "$TMP/sdf" --folder --golden-dir "$TMP/stockbase/cubegm" --yes 2>&1)"; RC=$?
+check_rc "idempotente folder rc" "$RC" 0
+case "$OUT" in *"nada que hacer"*) ok "mensaje idempotente folder" ;; *) bad "mensaje idempotente folder" ;; esac
 
 echo "== TF3: base cubegm adulterada → RECHAZA sin tocar boot/ =="
 mkdir -p "$TMP/sdf2/boot" "$TMP/badbase/cubegm"
@@ -265,16 +269,17 @@ else
   ok "base cubegm adulterada muere"
 fi
 check_eq "boot/ intacta tras rechazo" "$(h "$TMP/sdf2/boot/vmlinux.uImage")" "$S2K"
+if [ -d "$TMP/sdf2/cubegm" ]; then bad "no debe crear cubegm/ tras rechazo"; else ok "cubegm/ no creada tras rechazo"; fi
 
-echo "== TF4: to_own --folder restaura boot/ y respalda cubegm/ =="
+echo "== TF4: to_own --folder — par propio + cubegm/ ELIMINADA =="
 sleep 1.1
-OUT="$($TO_OWN --sd "$TMP/sdf" --folder --yes 2>&1)"; RC=$?
+OUT="$($TO_OWN --sd "$TMP/sdf" --folder --bundle-dir "$TMP/own-bundle" --yes 2>&1)"; RC=$?
 check_rc "to_own --folder rc" "$RC" 0
-if [ -d "$TMP/sdf/boot" ]; then ok "boot/ restaurada"; else bad "boot/ restaurada"; fi
-check_eq "kernel propio restaurado" "$(h "$TMP/sdf/boot/vmlinux.uImage")" "$F_K"
-check_eq "dtb propio restaurado" "$(h "$TMP/sdf/boot/dtb.bin")" "$F_D"
-check_eq ".bak restaurado" "$(h "$TMP/sdf/boot/vmlinux.uImage.prev.bak")" "$F_B"
-if [ -d "$TMP/sdf/cubegm" ]; then bad "cubegm/ debe moverse a folders/"; else ok "cubegm/ movida a folders/"; fi
+if [ -d "$TMP/sdf/boot" ]; then ok "boot/ SIGUE presente"; else bad "boot/ SIGUE presente"; fi
+check_eq "kernel propio restaurado" "$(h "$TMP/sdf/boot/vmlinux.uImage")" "$OB_K"
+check_eq "dtb propio restaurado" "$(h "$TMP/sdf/boot/dtb.bin")" "$OB_D"
+check_eq ".bak intacto" "$(h "$TMP/sdf/boot/vmlinux.uImage.prev.bak")" "$F_B"
+if [ -d "$TMP/sdf/cubegm" ]; then bad "cubegm/ debe ELIMINARSE (backup)"; else ok "cubegm/ ELIMINADA"; fi
 CBD="$(find "$TMP/sdf/kernel-switch/folders" -mindepth 1 -maxdepth 1 -type d -name 'cubegm-stock-*' | tail -n1)"
 if [ -f "$CBD.manifest.sha256" ] && ( cd "$CBD" && sha256sum -c "$CBD.manifest.sha256" ) >/dev/null 2>&1; then
   ok "backup cubegm verifica"
@@ -283,13 +288,20 @@ else
 fi
 check_eq "estado own" "$(state_get "$TMP/sdf")" "own"
 check_eq "modo folder (own)" "$(sed -n 's/^MODE=//p' "$TMP/sdf/kernel-switch/state")" "folder"
-case "$OUT" in *"HCFOTA-own-v3"*) ok "pasos NOR own impresos" ;; *) bad "pasos NOR own impresos" ;; esac
+case "$OUT" in
+  *"HCFOTA"*) bad "NO debe imprimir pasos HCFOTA (v2 sin NOR)" ;;
+  *) ok "sin pasos HCFOTA (to_own v2)" ;;
+esac
 
-echo "== TF5: to_own --folder sin backup → muere =="
-mkdir -p "$TMP/sdf3/cubegm"
-mkfile "$TMP/sdf3/cubegm/vmlinux.uImage" 42000
-mkfile "$TMP/sdf3/cubegm/dtb.bin" 5200
-if $TO_OWN --sd "$TMP/sdf3" --folder --yes >/dev/null 2>&1; then bad "sin backup folder debe morir"; else ok "sin backup folder muere"; fi
+echo "== TF5: to_own --folder sin cubegm/ presente → solo par =="
+mkdir -p "$TMP/sdf5/boot"
+mkfile "$TMP/sdf5/boot/vmlinux.uImage" 43000
+mkfile "$TMP/sdf5/boot/dtb.bin" 5300
+mkfile "$TMP/sdf5/boot/avp.uImage" 30300
+OUT="$($TO_OWN --sd "$TMP/sdf5" --folder --bundle-dir "$TMP/own-bundle2" --yes 2>&1)"; RC=$?
+check_rc "to_own --folder sin cubegm rc" "$RC" 0
+check_eq "par propio instalado" "$(h "$TMP/sdf5/boot/vmlinux.uImage")" "$OB2_K"
+check_eq "modo folder (sdf5)" "$(sed -n 's/^MODE=//p' "$TMP/sdf5/kernel-switch/state")" "folder"
 
 echo
 echo "=== RESULTADO: PASS=$PASS FAIL=$FAIL ==="

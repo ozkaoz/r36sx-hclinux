@@ -6,14 +6,15 @@
 #     layout que el bootloader de ESA consola espera:
 #     - bootloader stock (fábrica):              <sd>/cubegm/   → SIN flash
 #     - bootloader propio (NOR fábrica+7B, Fase D): <sd>/boot/
-#   MODO CARPETA (--folder — volver de un estado stock de carpeta): cubegm/ → backup;
-#     boot/ restaurada desde kernel-switch/folders/boot-own-*/ (verificada). REQUIERE
-#     flash NOR propio (kit own HCFOTA-own-v3) — el script imprime los pasos.
+#   MODO CARPETA (--folder — SO COMPLETO propio, SIN flash NOR): boot/ = par NUESTRO
+#     + cubegm/ ELIMINADA (backup en kernel-switch/folders/). El SO propio usa
+#     treefrog/ (ya presente en la SD). Requisito ONE-TIME (Fase D): bootloader
+#     propio (lee boot/). boot/ SIEMPRE presente → sin gap de arranque.
 #
 # Uso (archivo):
 #   ./scripts/kernel_to_own.sh --sd /mnt/g [fuente] [--avp FILE] [--dry-run] [--yes]
 # Uso (carpeta):
-#   ./scripts/kernel_to_own.sh --sd /mnt/g --folder [--dry-run] [--yes]
+#   ./scripts/kernel_to_own.sh --sd /mnt/g --folder [fuente] [--dry-run] [--yes]
 # Fuente (modo archivo, prioridad):
 #   --kernel FILE --dtb FILE   explícitos
 #   --bundle-dir DIR           dir con vmlinux.uImage + dtb.bin (artefacto distribuido)
@@ -25,9 +26,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 usage() {
   cat <<'EOF'
-Uso: kernel_to_own.sh --sd <ruta SD> [fuente] [--avp FILE] | --folder [--dry-run] [--yes]
+Uso: kernel_to_own.sh --sd <ruta SD> [fuente] [--avp FILE] | --folder [fuente] [--dry-run] [--yes]
 Modo ARCHIVO: fuente = --kernel/--dtb · --bundle-dir · --from-build · base propia (default)
-Modo CARPETA (--folder): cubegm/ -> backup; boot/ <- kernel-switch/folders/ + PASO NOR own (impreso)
+Modo CARPETA (--folder): par propio en boot/ + cubegm/ ELIMINADA (backup) — SIN flash NOR
 EOF
 }
 
@@ -53,47 +54,11 @@ done
 SD="$(ks_require_sd "${SD:-}")"
 KS_LAYOUT="$(ks_detect_layout "$SD")"
 
-# ============ MODO CARPETA (E4): volver de stock-carpeta a nuestro boot/ ============
-if [ "$FOLDER" = "1" ]; then
-  if [ "$KS_LAYOUT" != "cubegm" ]; then
-    ks_die "to_own --folder requiere layout cubegm/ (estado stock de carpeta). Detectado: $KS_LAYOUT/"
-  fi
-  ks_state_read "$SD"
-  if [ "$KS_STATE" = "own" ] && [ -d "$SD/boot" ]; then
-    echo "La SD ya está en modo carpeta PROPIO (boot/ presente) — nada que hacer."
-    exit 0
-  fi
-  FOLDERS="$(ks_folders_dir "$SD")"
-  BDIR="$(find "$FOLDERS" -mindepth 1 -maxdepth 1 -type d -name 'boot-own-*' 2>/dev/null | sort | tail -n1 || true)"
-  if [ -z "$BDIR" ]; then
-    ks_die "no hay backup de carpeta boot-own-*/ en kernel-switch/folders/ — usa el modo archivo (--bundle-dir) o crea el backup con to_stock --folder"
-  fi
-  ks_folder_ok "$BDIR" || ks_die "backup de carpeta CORRUPTO o sin manifest: $BDIR"
-  for f in "${KS_PAIR[@]}"; do
-    if [ ! -f "$BDIR/$f" ]; then ks_die "falta $f en $BDIR"; fi
-  done
-  ks_show_info "$SD" "$KS_LAYOUT"
-  FTS="$(date -u +%Y%m%dT%H%M%SZ)"
-  echo "Fuente: $BDIR (nuestra boot/ del swap anterior — manifest verificado)"
-  echo "Plan (modo carpeta → PROPIO):"
-  echo "  1. $SD/cubegm/  →  kernel-switch/folders/cubegm-stock-$FTS/ (backup move+manifest)"
-  echo "  2. $BDIR/       →  $SD/boot/ (copia verificada contra el manifest del backup)"
-  echo "  3. PASO NOR (manual, impreso al final): kit own HCFOTA-own-v3 → bootloader FÁBRICA+7B (lee boot/)"
-  echo
-  echo "  *** AVISO: entre el swap y el flash NOR la consola NO arranca (gap inevitable, recovery BootROM-USB activo)."
-  if [ "$KS_DRY_RUN" = "1" ]; then
-    echo "DRY-RUN: no se escribe nada."
-    exit 0
-  fi
-  ks_confirm "¿Ejecutar el swap de carpeta a PROPIO en $SD?"
-  ks_folder_backup "$SD/cubegm" "$FOLDERS/cubegm-stock-$FTS"
-  ks_folder_install "$BDIR" "$SD/boot"
-  ks_state_write "$SD" own folder
-  echo
-  echo "OK — SD en modo carpeta PROPIO: boot/ restaurada (verificación total PASS)."
-  echo "cubegm/ stock respaldada en: kernel-switch/folders/cubegm-stock-$FTS/"
-  ks_print_nor_steps own
-  exit 0
+# ============ MODO CARPETA v2 (--folder): SO COMPLETO propio — SIN NOR ============
+# boot/ queda SIEMPRE presente (nunca se mueve). cubegm/ se ELIMINA (backup) tras
+# instalar el par propio. Requisito de producto (usuario): NUNCA se toca NOR.
+if [ "$FOLDER" = "1" ] && [ "$KS_LAYOUT" != "boot" ]; then
+  ks_die "--folder requiere layout boot/ (bootloader propio Fase D). Detectado: $KS_LAYOUT/"
 fi
 
 WORK="$HOME/work/r36sx-hclinux"
@@ -127,11 +92,17 @@ fi
 
 if [ "$(ks_sha256 "$SD/$KS_LAYOUT/vmlinux.uImage")" = "$HK" ] \
    && [ "$(ks_sha256 "$SD/$KS_LAYOUT/dtb.bin")" = "$HD" ]; then
-  echo "El kernel propio ya está instalado (hashes idénticos) — nada que hacer."
-  exit 0
+  if [ "$FOLDER" != "1" ] || [ ! -d "$SD/cubegm" ]; then
+    echo "El kernel propio ya está instalado (hashes idénticos) — nada que hacer."
+    exit 0
+  fi
 fi
 
 echo "Plan: reemplazar vmlinux.uImage + dtb.bin en $SD/$KS_LAYOUT/ (backup automático previo)"
+if [ "$FOLDER" = "1" ] && [ -d "$SD/cubegm" ]; then
+  echo "  + cubegm/ → ELIMINADA tras el swap (backup en kernel-switch/folders/) — el SO propio usa treefrog/"
+fi
+echo "  + boot/ SIEMPRE presente — SIN flash NOR, SIN gap de arranque"
 if [ "$KS_DRY_RUN" = "1" ]; then
   echo "DRY-RUN: no se escribe nada."
   exit 0
@@ -153,7 +124,24 @@ fi
 # post-verificación
 if [ "$(ks_sha256 "$SD/$KS_LAYOUT/vmlinux.uImage")" != "$HK" ]; then ks_die "post-verify kernel FAIL"; fi
 if [ "$(ks_sha256 "$SD/$KS_LAYOUT/dtb.bin")" != "$HD" ]; then ks_die "post-verify DTB FAIL"; fi
-ks_state_write "$SD" own
+
+# modo carpeta v2: ELIMINAR cubegm/ (backup) SOLO tras verificar el par propio —
+# si algo falló antes, cubegm/ queda intacta (la consola sigue arrancando el stock)
+if [ "$FOLDER" = "1" ] && [ -d "$SD/cubegm" ]; then
+  ks_folder_backup "$SD/cubegm" "$(ks_folders_dir "$SD")/cubegm-stock-$(date -u +%Y%m%dT%H%M%SZ)"
+fi
+
+if [ "$FOLDER" = "1" ]; then
+  ks_state_write "$SD" own folder
+else
+  ks_state_write "$SD" own
+fi
 echo
 echo "OK — kernel propio instalado en $SD/$KS_LAYOUT/ (post-verify SHA256 PASS)."
-echo "Vuelta al estado anterior: ./scripts/kernel_to_stock.sh --sd $SD"
+if [ "$FOLDER" = "1" ]; then
+  echo "SO PROPIO COMPLETO: boot/ = kernel nuestro + cubegm/ eliminada (backup en kernel-switch/folders/)."
+  echo "SIN flash NOR: el bootloader propio carga nuestro kernel desde boot/; el SO usa treefrog/."
+  echo "Vuelta al SO stock: ./scripts/kernel_to_stock.sh --sd $SD --folder"
+else
+  echo "Vuelta al estado anterior: ./scripts/kernel_to_stock.sh --sd $SD"
+fi

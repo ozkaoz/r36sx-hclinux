@@ -11,11 +11,11 @@
 #                               manifests/GOLDEN_STOCK.sha256 (AVISO: kernel DE FÁBRICA).
 #                               Default: base canónica del usuario (Desktop "R36SX V2.6
 #                               (0712) Minimal Backup/cubegm"), fallback /mnt/d/R36SX/goldens-stock.
-#   MODO CARPETA (--folder — consola con NOR propio, Fase D): boot/ → backup verificado;
-#     cubegm/ (SISTEMA stock COMPLETO, 500MB+) instalado desde la base canónica con
-#     verificación total + par contra goldens. REQUIERE flash NOR a fábrica (kit
-#     factory-restore) — el script imprime los pasos exactos. Evidencia Fase D boot-2:
-#     el NOR propio lee boot/ EXCLUSIVAMENTE → sin el flash, la consola no arranca.
+#   MODO CARPETA (--folder — SO COMPLETO stock, SIN flash NOR): boot/ = par de FÁBRICA
+#     + cubegm/ (SISTEMA stock COMPLETO) CREADA desde la base canónica (verificación
+#     total + par vs goldens). Requisito de producto: el usuario final NUNCA toca
+#     HCProgrammer — el bootloader propio (one-time, Fase D) carga el kernel stock
+#     desde boot/ y su sistema usa cubegm/. boot/ SIEMPRE presente → sin gap de arranque.
 #
 # Uso:
 #   ./scripts/kernel_to_stock.sh --sd /mnt/g [--from-set TS | --golden-dir DIR | --folder] [--avp] [--dry-run] [--yes]
@@ -51,42 +51,29 @@ done
 SD="$(ks_require_sd "${SD:-}")"
 KS_LAYOUT="$(ks_detect_layout "$SD")"
 
-# ============ MODO CARPETA (E4): boot/ ↔ cubegm/ + flash NOR coordinado ============
+# ============ MODO CARPETA v2 (--folder): SO COMPLETO stock — SIN NOR ============
+# Requisito de producto (usuario, 2026-09-30): el usuario final NO tiene HCProgrammer
+# → el switch NUNCA toca NOR. Prerrequisito ONE-TIME (Fase D): bootloader propio
+# (lee boot/). SO STOCK = boot/ con par de FÁBRICA + cubegm/ (sistema) CREADA.
+# El kernel stock arranca su userspace vendor que lanza el sistema desde cubegm/.
+# boot/ SIEMPRE presente → la consola nunca queda sin arrancar (sin gap).
+FSRC=""
 if [ "$FOLDER" = "1" ]; then
   if [ "$KS_LAYOUT" != "boot" ]; then
-    ks_die "to_stock --folder requiere layout boot/ (consola con NOR propio). Detectado: $KS_LAYOUT/. Para consolas stock usa el modo archivo (sin --folder)."
+    ks_die "--folder requiere layout boot/ (bootloader propio Fase D). Detectado: $KS_LAYOUT/ — para consolas stock usa el modo archivo."
   fi
   ks_state_read "$SD"
-  if [ "$KS_STATE" = "stock" ] && [ -d "$SD/cubegm" ]; then
-    echo "La SD ya está en modo carpeta STOCK (cubegm/ presente, estado: $KS_STATE) — nada que hacer."
+  if [ "$KS_STATE" = "stock" ] && [ "$KS_STATE_MODE" = "folder" ] && [ -d "$SD/cubegm" ]; then
+    echo "La SD ya está en SO STOCK completo (par stock en boot/ + cubegm/ presente) — nada que hacer."
     exit 0
   fi
-  if [ -n "$GOLDEN_DIR" ]; then FSRC="$GOLDEN_DIR"; else FSRC="$(ks_stock_base_dir)"; fi
-  if [ -z "$FSRC" ]; then ks_die "sin base cubegm stock disponible — usa --golden-dir <carpeta cubegm stock>"; fi
-  ks_check_golden_dir "$FSRC" 0   # par verificado contra el manifiesto del repo ANTES de tocar nada
-  ks_show_info "$SD" "$KS_LAYOUT"
-  FTS="$(date -u +%Y%m%dT%H%M%SZ)"
-  FBDIR="$(ks_folders_dir "$SD")/boot-own-$FTS"
-  echo "Plan (modo carpeta → STOCK):"
-  echo "  1. $SD/boot/  →  kernel-switch/folders/boot-own-$FTS/ (backup move+manifest)"
-  echo "  2. $FSRC/     →  $SD/cubegm/ (sistema stock COMPLETO — verificación total + par vs goldens)"
-  echo "  3. PASO NOR (manual, impreso al final): kit factory-restore → bootloader de FÁBRICA (lee cubegm/)"
-  echo
-  echo "  *** AVISO: entre el swap y el flash NOR la consola NO arranca (gap inevitable, recovery BootROM-USB activo)."
-  if [ "$KS_DRY_RUN" = "1" ]; then
-    echo "DRY-RUN: no se escribe nada."
-    exit 0
+  if [ -d "$SD/cubegm" ]; then
+    ks_log "cubegm/ ya presente — se reutiliza"
+  else
+    if [ -n "$GOLDEN_DIR" ]; then FSRC="$GOLDEN_DIR"; else FSRC="$(ks_stock_base_dir)"; fi
+    if [ -z "$FSRC" ]; then ks_die "sin base cubegm stock disponible — usa --golden-dir <carpeta cubegm stock>"; fi
+    ks_check_golden_dir "$FSRC" 0   # par verificado ANTES de tocar nada
   fi
-  ks_confirm "¿Ejecutar el swap de carpeta a STOCK en $SD?"
-  ks_folder_backup "$SD/boot" "$FBDIR"
-  ks_folder_install "$FSRC" "$SD/cubegm"
-  ks_check_golden_dir "$SD/cubegm" 0
-  ks_state_write "$SD" stock folder
-  echo
-  echo "OK — SD en modo carpeta STOCK: cubegm/ = sistema de fábrica (par == goldens, verificación total PASS)."
-  echo "Nuestra boot/ respaldada en: kernel-switch/folders/boot-own-$FTS/"
-  ks_print_nor_steps stock
-  exit 0
 fi
 
 # --- resolver fuente (modo archivo) ---
@@ -131,13 +118,25 @@ else
 fi
 if [ -z "$TK" ] || [ -z "$TD" ]; then ks_die "manifest de $SRC no aporta hashes válidos para el par — restore RECHAZADO"; fi
 
+PAIR_ALREADY="no"
 if [ "$(ks_sha256 "$SD/$KS_LAYOUT/vmlinux.uImage")" = "$TK" ] \
    && [ "$(ks_sha256 "$SD/$KS_LAYOUT/dtb.bin")" = "$TD" ]; then
-  echo "El kernel de la fuente ya está instalado (hashes idénticos) — nada que hacer."
-  exit 0
+  PAIR_ALREADY="yes"
+fi
+if [ "$PAIR_ALREADY" = "yes" ]; then
+  if [ "$FOLDER" != "1" ] || [ -d "$SD/cubegm" ]; then
+    echo "El kernel de la fuente ya está instalado (hashes idénticos) — nada que hacer."
+    exit 0
+  fi
 fi
 
 echo "Plan: restaurar vmlinux.uImage + dtb.bin en $SD/$KS_LAYOUT/ desde: $KIND"
+if [ "$FOLDER" = "1" ]; then
+  if [ -n "$FSRC" ]; then
+    echo "  + CREAR $SD/cubegm/ (sistema stock COMPLETO desde $FSRC — verificación total + par vs goldens)"
+  fi
+  echo "  + boot/ SIEMPRE presente — el bootloader propio carga el kernel stock; SIN flash NOR, SIN gap"
+fi
 if [ "$SRCTYPE" = "golden" ]; then
   echo
   echo "  *** AVISO: base GOLDEN STOCK — se restaura el kernel DE FÁBRICA, no tu kernel anterior."
@@ -152,6 +151,13 @@ ks_confirm "¿Restaurar en $SD ($KS_LAYOUT/)? (se crea snapshot del estado actua
 # snapshot del estado ACTUAL para poder volver (simetría en ambos sentidos)
 ks_snapshot_current "$SD" "$KS_LAYOUT" "$AVP_FLAG"
 
+# modo carpeta v2: CREAR cubegm/ (sistema stock) ANTES de tocar el par —
+# si la copia/verificación falla, el par queda intacto (la consola sigue arrancando)
+if [ "$FOLDER" = "1" ] && [ -n "$FSRC" ]; then
+  ks_folder_install "$FSRC" "$SD/cubegm"
+  ks_check_golden_dir "$SD/cubegm" 0
+fi
+
 if [ "$SRCTYPE" = "golden" ]; then
   ks_restore_golden "$SD" "$KS_LAYOUT" "$SRC" "$AVP_FLAG"
 else
@@ -161,8 +167,18 @@ fi
 # post-verificación
 if [ "$(ks_sha256 "$SD/$KS_LAYOUT/vmlinux.uImage")" != "$TK" ]; then ks_die "post-verify kernel FAIL"; fi
 if [ "$(ks_sha256 "$SD/$KS_LAYOUT/dtb.bin")" != "$TD" ]; then ks_die "post-verify DTB FAIL"; fi
-ks_state_write "$SD" "$NEWSTATE"
+if [ "$FOLDER" = "1" ]; then
+  ks_state_write "$SD" "$NEWSTATE" folder
+else
+  ks_state_write "$SD" "$NEWSTATE"
+fi
 echo
 echo "OK — kernel restaurado en $SD/$KS_LAYOUT/ (post-verify SHA256 PASS). Estado: $NEWSTATE"
-echo "Kernel actual: $(ks_sha256 "$SD/$KS_LAYOUT/vmlinux.uImage" | cut -c1-8) · $(ks_describe_file "$SD/$KS_LAYOUT/vmlinux.uImage")"
-echo "Vuelta al kernel propio: ./scripts/kernel_to_own.sh --sd $SD (o --from-set para un snapshot)"
+if [ "$FOLDER" = "1" ]; then
+  echo "SO STOCK COMPLETO: boot/ = kernel de fábrica + cubegm/ (sistema stock) presente."
+  echo "SIN flash NOR: el bootloader propio carga el kernel stock desde boot/ y su sistema corre desde cubegm/."
+  echo "Vuelta al SO propio: ./scripts/kernel_to_own.sh --sd $SD --folder [fuente]"
+else
+  echo "Kernel actual: $(ks_sha256 "$SD/$KS_LAYOUT/vmlinux.uImage" | cut -c1-8) · $(ks_describe_file "$SD/$KS_LAYOUT/vmlinux.uImage")"
+  echo "Vuelta al kernel propio: ./scripts/kernel_to_own.sh --sd $SD (o --from-set para un snapshot)"
+fi

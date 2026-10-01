@@ -50,17 +50,21 @@ ks_require_sd() { # $1=dir — valida y devuelve ruta sin barra final
   printf '%s\n' "$sd"
 }
 
-ks_detect_layout() { # $1=sd → boot | cubegm (EXACTAMENTE uno de los dos)
-  local sd="$1" found=""
-  if [ -f "$sd/boot/vmlinux.uImage" ]; then found="boot"; fi
+ks_detect_layout() { # $1=sd → boot | cubegm — boot/ TIENE PRIORIDAD.
+  # En el modo carpeta v2 (SO stock completo) AMBAS carpetas coexisten POR DISEÑO:
+  # boot/ = par que carga el bootloader propio (Fase D); cubegm/ = sistema stock
+  # (payload del kernel de fábrica). El bootloader propio lee boot/ → boot/ manda.
+  # Una consola con NOR de fábrica nunca tiene boot/ en su SD → cubegm/.
+  local sd="$1"
+  if [ -f "$sd/boot/vmlinux.uImage" ]; then
+    printf 'boot\n'
+    return 0
+  fi
   if [ -f "$sd/cubegm/vmlinux.uImage" ]; then
-    if [ -n "$found" ]; then ks_die "layout ambiguo: $sd/boot y $sd/cubegm tienen ambos vmlinux.uImage"; fi
-    found="cubegm"
+    printf 'cubegm\n'
+    return 0
   fi
-  if [ -z "$found" ]; then
-    ks_die "no se detectó layout de boot: se espera <sd>/boot/vmlinux.uImage (NOR propio, Fase D) o <sd>/cubegm/vmlinux.uImage (bootloader stock)"
-  fi
-  printf '%s\n' "$found"
+  ks_die "no se detectó layout de boot: se espera <sd>/boot/vmlinux.uImage (NOR propio, Fase D) o <sd>/cubegm/vmlinux.uImage (bootloader stock)"
 }
 
 ks_state_dir() { printf '%s/%s\n' "$1" "$KS_STATE_DIR"; }
@@ -336,36 +340,4 @@ ks_folder_install() { # $1=src_folder $2=dest_folder — cp -a + rename + verifi
   mv -f "$mf" "$dest.manifest.sha256" || ks_die "no se pudo situar el manifest: $dest.manifest.sha256"
   sync
   ks_log "carpeta instalada y verificada: $dest"
-}
-
-ks_print_nor_steps() { # $1 = stock|own — pasos del flash NOR (físico, kits probados)
-  if [ "$1" = "stock" ]; then
-    cat <<'EOF'
-
-PASO NOR OBLIGATORIO (físico ~2 min — método probado 2026-09-21, LEEME-RESTAURACION v3):
-  1. PC: ejecutar como ADMINISTRADOR:  D:\R36SX\hcprogrammer-restore-kit\HCProgrammer.exe
-  2. Cargar proyecto:                  D:\R36SX\hcprogrammer-restore-kit\hcprog.ini
-  3. Firmware:                         D:\R36SX\hcprogrammer-restore-kit\HCFOTA-factory-restore.bin
-     (NOR 100% fábrica — bootloader lee cubegm/)
-  4. Tool ESCUCHANDO antes de encender; consola APAGADA conectada por USB-C
-  5. ENCENDER la consola — ventana BootROM ~300ms tras el encendido (reintentar 3-5x)
-  6. Flashear → consola arranca 100% STOCK desde cubegm/
-Hasta completar este paso la consola NO arranca (boot/ fue retirada de la SD).
-Recovery siempre disponible: BootROM-USB (mismo kit).
-EOF
-  else
-    cat <<'EOF'
-
-PASO NOR OBLIGATORIO (físico ~2 min — método probado 2026-09-25, Fase D BOOT-1 PASS):
-  1. PC: ejecutar como ADMINISTRADOR:  D:\R36SX\hcprogrammer-own-kit\HCProgrammer.exe
-  2. Cargar proyecto:                  D:\R36SX\hcprogrammer-own-kit\hcprog.ini
-  3. Firmware:                         D:\R36SX\hcprogrammer-own-kit\HCFOTA-own-v3.bin
-     (bootloader FÁBRICA + 7 bytes: path-prefix "boot" — lee boot/)
-  4. Tool ESCUCHANDO antes de encender; consola APAGADA conectada por USB-C
-  5. ENCENDER la consola — ventana BootROM ~300ms tras el encendido (reintentar 3-5x)
-  6. Flashear → consola arranca nuestro SO desde boot/
-Hasta completar este paso la consola NO arranca (cubegm/ fue retirada de la SD).
-Recovery siempre disponible: BootROM-USB (kit factory-restore).
-EOF
-  fi
 }
